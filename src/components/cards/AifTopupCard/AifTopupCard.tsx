@@ -101,29 +101,29 @@ export function AifCardShell({ fund, unitCount, children }: { fund: AifHeader; u
           }
         }}
         sx={{
-          position: 'relative', display: 'flex', alignItems: 'flex-start', minHeight: rem(73.5), boxSizing: 'border-box',
-          pl: rem(19.5), pr: rem(22.5), cursor: 'pointer', outline: 'none', borderBottom: `${rem(1)} solid ${C.line}`,
+          position: 'relative', display: 'flex', alignItems: 'flex-start', minHeight: rem(85), boxSizing: 'border-box',
+          pl: rem(23.4), pr: rem(24), cursor: 'pointer', outline: 'none', borderBottom: `${rem(1)} solid ${C.line}`,
           '&:focus-visible': { boxShadow: `inset 0 0 0 ${rem(2)} ${colors.gold.soft}` },
         }}
       >
-        <Box sx={{ mt: rem(17), mr: rem(30) }}>
-          <CheckDot on={open} size={20.5} icon={11} />
+        <Box sx={{ mt: rem(21), mr: rem(12) }}>
+          <CheckDot on={open} size={23} icon={12} />
         </Box>
-        <Box sx={{ flex: 1, minWidth: 0, pt: rem(17), pb: rem(10) }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: rem(8), height: rem(14) }}>
+        <Box sx={{ flex: 1, minWidth: 0, pt: rem(20.4), pb: rem(19) }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: rem(11), height: rem(14) }}>
             <Logo size={rem(10)} />
-            <Box component="span" sx={{ ...font, fontSize: rem(9.75), letterSpacing: '0.07em', color: C.head, textTransform: 'uppercase' }}>
+            <Box component="span" sx={{ ...font, fontSize: rem(11.25), letterSpacing: '0.07em', color: C.head, textTransform: 'uppercase' }}>
               {fund.provider}
             </Box>
           </Box>
-          <Box sx={{ mt: rem(6), display: 'flex', alignItems: 'center', gap: rem(10.5), flexWrap: 'wrap' }}>
-            <Box component="h3" sx={{ ...font, fontSize: rem(13.3), fontWeight: 700, lineHeight: rem(20), color: C.text }}>
+          <Box sx={{ mt: rem(7.3), display: 'flex', alignItems: 'center', gap: rem(12), flexWrap: 'wrap' }}>
+            <Box component="h3" sx={{ ...font, fontSize: rem(17.25), fontWeight: 700, lineHeight: rem(24), color: C.text }}>
               {fund.name}
             </Box>
             <Box
               sx={{
-                height: rem(20.5), px: rem(5.5), display: 'flex', alignItems: 'center', borderRadius: rem(4), boxSizing: 'border-box',
-                bgcolor: colors.cream[939], border: `${rem(1)} solid ${colors.sand[812]}`, color: colors.brown[327], fontWeight: 600, fontSize: rem(10.5),
+                height: rem(24), px: rem(6.5), display: 'flex', alignItems: 'center', borderRadius: rem(4), boxSizing: 'border-box',
+                bgcolor: colors.cream[939], border: `${rem(1)} solid ${colors.sand[812]}`, color: colors.brown[327], fontWeight: 600, fontSize: rem(11.75),
                 letterSpacing: '0.05em', whiteSpace: 'nowrap',
               }}
             >
@@ -131,11 +131,11 @@ export function AifCardShell({ fund, unitCount, children }: { fund: AifHeader; u
             </Box>
           </Box>
         </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: rem(14), mt: rem(16) }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: rem(16.6), mt: rem(19) }}>
           <Box
             sx={{
-              height: rem(20.5), px: rem(8.5), display: 'flex', alignItems: 'center', borderRadius: rem(5), bgcolor: colors.blue[935],
-              color: colors.blue[392], fontWeight: 700, fontSize: rem(10.5), letterSpacing: '0.05em', whiteSpace: 'nowrap',
+              height: rem(22.3), px: rem(9.8), display: 'flex', alignItems: 'center', borderRadius: rem(5), bgcolor: colors.blue[935],
+              color: colors.blue[392], fontWeight: 700, fontSize: rem(11.5), letterSpacing: '0.05em', whiteSpace: 'nowrap',
             }}
           >
             {fund.category}
@@ -146,7 +146,7 @@ export function AifCardShell({ fund, unitCount, children }: { fund: AifHeader; u
               transition: `transform ${DUR}s ${EASE}`,
             }}
           >
-            <ChevronDown size="1rem" strokeWidth={2.2} />
+            <ChevronDown size="0.75rem" strokeWidth={2.4} />
           </Box>
         </Box>
       </Box>

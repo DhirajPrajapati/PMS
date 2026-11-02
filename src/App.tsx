@@ -1,5 +1,5 @@
 import { Box, ButtonBase } from '@mui/material'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { fetchAifRedemption } from './api/aifRedemption'
 import { fetchAifTopup } from './api/aifTopup'
 import { fetchMyStrategies } from './api/myStrategies'
@@ -13,6 +13,8 @@ import { PmsCardSkeleton, PmsCard, type CardVariant, type PmsStrategy } from './
 import CardCarousel from './components/common/CardCarousel'
 import PageSection, { ResponsesVisibleContext } from './components/common/PageSection'
 import MyStrategiesSection, { MyStrategiesSkeleton } from './components/MyStrategiesSection'
+import ReportsPage from './components/reports/ReportsPage'
+import ProfilesSection from './components/ProfilesSection'
 import PendingRedemptionsDialog from './components/PendingRedemptionsDialog'
 import RdFileDialog from './components/RdFileDialog'
 import { useApiResource } from './hooks/useApiResource'
@@ -56,7 +58,7 @@ function PmsSection({ index, variant, title, subtitle, path, fetchPage, onViewPe
   )
 }
 
-export default function App() {
+function PortalPage() {
   const [showResponses, setShowResponses] = useState(true)
   const [pendingFor, setPendingFor] = useState<PmsStrategy | null>(null)
   const [rdFor, setRdFor] = useState<PmsStrategy | null>(null)
@@ -72,7 +74,10 @@ export default function App() {
   return (
     <ResponsesVisibleContext.Provider value={showResponses}>
       <Box sx={{ maxWidth: rem(1680), mx: 'auto', pb: rem(40) }}>
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', px: rem(14), pt: rem(14) }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', px: rem(14), pt: rem(14) }}>
+          <Box component="a" href="#/reports" sx={{ fontSize: rem(12), fontWeight: 700, color: colors.brand.primary, textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}>
+            Investment Reports page →
+          </Box>
           <ButtonBase
             role="switch"
             aria-checked={showResponses}
@@ -153,8 +158,10 @@ export default function App() {
           )}
         </PageSection>
 
+        <ProfilesSection index={7} />
+
         <PageSection
-          index={7}
+          index={8}
           title="Redemption Dialog APIs"
           subtitle="Opened from the redemption cards in section 3"
           responses={[
@@ -168,4 +175,20 @@ export default function App() {
       </Box>
     </ResponsesVisibleContext.Provider>
   )
+}
+
+const readPage = () => (window.location.hash.startsWith('#/reports') ? 'reports' : 'portal')
+
+/** Tiny hash router: "#/reports" opens Investment Reports, anything else is the component gallery. */
+export default function App() {
+  const [page, setPage] = useState(readPage)
+  useEffect(() => {
+    const on = () => {
+      setPage(readPage())
+      window.scrollTo({ top: 0 })
+    }
+    window.addEventListener('hashchange', on)
+    return () => window.removeEventListener('hashchange', on)
+  }, [])
+  return page === 'reports' ? <ReportsPage /> : <PortalPage />
 }

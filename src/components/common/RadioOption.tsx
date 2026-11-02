@@ -14,7 +14,7 @@ export default function RadioOption({ on, label, onClick }: { on: boolean; label
       <Box
         sx={{
           width: rem(14), height: rem(14), borderRadius: '50%', boxSizing: 'border-box', display: 'grid', placeItems: 'center',
-          border: `${rem(1.5)} solid ${on ? '${colors.brand.primary}' : '${colors.sand[776]}'}`, transition: 'border-color .15s',
+          border: `${rem(1.5)} solid ${on ? colors.brand.primary : colors.sand[776]}`, transition: 'border-color .15s',
         }}
       >
         <Box sx={{ width: rem(7), height: rem(7), borderRadius: '50%', bgcolor: colors.brand.primary, transform: on ? 'scale(1)' : 'scale(0)', transition: `transform .18s ${EASE}` }} />

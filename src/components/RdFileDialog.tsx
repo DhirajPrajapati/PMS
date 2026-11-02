@@ -1,11 +1,12 @@
-import { Box, ButtonBase, Dialog } from '@mui/material'
-import { TriangleAlert, X } from 'lucide-react'
+import { Box, ButtonBase } from '@mui/material'
+import { TriangleAlert } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { fetchRdFile, type RdFile, type RdRow } from '../api/rdFile'
 import { rem } from '../utils/format'
+import DialogShell from './common/DialogShell'
 import Logo from './common/Logo'
 import type { PmsStrategy } from './cards/PmsCard'
-import { colors, gradients, overlays, shadows } from '../theme'
+import { colors } from '../theme'
 
 const MOBILE = '@media (max-width:48rem)'
 
@@ -84,42 +85,26 @@ export default function RdFileDialog({ strategy, onClose }: Props) {
   }, [id])
 
   return (
-    <Dialog
+    <DialogShell
       open={!!strategy}
       onClose={onClose}
-      aria-labelledby="rd-file-title"
-      slotProps={{
-        backdrop: { sx: { bgcolor: overlays.backdrop, backdropFilter: 'blur(3px)' } },
-        paper: {
-          sx: {
-            width: rem(576), maxWidth: `calc(100% - ${rem(32)})`, maxHeight: `calc(100% - ${rem(32)})`, m: 0,
-            borderRadius: rem(20), overflow: 'hidden', bgcolor: colors.surface.dialog, fontFamily: 'inherit',
-            boxShadow: shadows.dialog,
-          },
-        },
-      }}
-    >
-      <Box sx={{ height: rem(3), flexShrink: 0, background: gradients.accentBar }} />
-
-      <Box
-        sx={{
-          bgcolor: colors.base.white, display: 'flex', alignItems: 'center', gap: rem(10), height: rem(49), px: rem(20),
-          borderBottom: `${rem(1)} solid ${C.line}`, flexShrink: 0,
-        }}
-      >
-        <Logo size={rem(20)} />
-        <Box id="rd-file-title" component="h2" sx={{ m: 0, flex: 1, fontFamily: 'inherit', fontSize: rem(13.5), fontWeight: 700, color: colors.brown[114] }}>
-          Tentative RD File
-        </Box>
+      titleId="rd-file-title"
+      title="Tentative RD File"
+      icon={<Logo size={rem(20)} />}
+      footer={
         <ButtonBase
-          aria-label="Close"
-          onClick={onClose}
-          sx={{ width: rem(24), height: rem(24), borderRadius: '50%', bgcolor: colors.surface.chip, color: colors.brown[294] }}
+          disabled={!file}
+          onClick={() => file && downloadCsv(file)}
+          sx={{
+            width: rem(102.5), height: rem(31.5), borderRadius: rem(12), bgcolor: colors.sand[620], color: colors.base.white,
+            fontFamily: 'inherit', fontSize: rem(10.5), fontWeight: 600, '&:hover': { bgcolor: colors.brown[569] },
+            '&.Mui-disabled': { bgcolor: colors.sand[831], color: colors.base.white },
+          }}
         >
-          <X size="0.75rem" strokeWidth={2.2} />
+          Download
         </ButtonBase>
-      </Box>
-
+      }
+    >
       <Box sx={{ px: rem(20), pt: rem(20), pb: rem(19), overflowY: 'auto', [MOBILE]: { px: rem(16) } }}>
         <Box sx={{ border: `${rem(1)} solid ${C.line}`, borderRadius: rem(14), overflow: 'hidden', bgcolor: colors.base.white }}>
           <Box
@@ -154,24 +139,6 @@ export default function RdFileDialog({ strategy, onClose }: Props) {
         )}
       </Box>
 
-      <Box
-        sx={{
-          bgcolor: colors.base.white, display: 'flex', justifyContent: 'flex-end', px: rem(20), py: rem(13),
-          borderTop: `${rem(1)} solid ${C.line}`, flexShrink: 0,
-        }}
-      >
-        <ButtonBase
-          disabled={!file}
-          onClick={() => file && downloadCsv(file)}
-          sx={{
-            width: rem(102.5), height: rem(31.5), borderRadius: rem(12), bgcolor: colors.sand[620], color: colors.base.white,
-            fontFamily: 'inherit', fontSize: rem(10.5), fontWeight: 600, '&:hover': { bgcolor: colors.brown[569] },
-            '&.Mui-disabled': { bgcolor: colors.sand[831], color: colors.base.white },
-          }}
-        >
-          Download
-        </ButtonBase>
-      </Box>
-    </Dialog>
+    </DialogShell>
   )
 }

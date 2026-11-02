@@ -14,14 +14,23 @@ Dev server: `npm run dev` → http://localhost:5173/. Typecheck: `npx tsc -b` (r
 - `highcharts-react-official` is CJS: use `(Mod as {default?}).default ?? Mod`.
 - macOS `sed -i` fails on patterns with parens/quotes → use python3 or Edit.
 - Testing in browser: `resize_window` doesn't change viewport; test narrow widths via same-origin iframe. Background tabs don't advance CSS transitions/rAF, so can't measure animations.
+- Reports-page screenshots are 2x captures at ~87.5% browser zoom (CSS px = image px / 1.75). `components/reports/ReportsParts.tsx` exports a **scaled** `rem(px)` = `baseRem(px*2/1.75)` for those pages; direct CSS px (mobile ≈ image px / 1.57) use `rem as css` from `utils/format`. Calibrate fonts by measuring rendered text widths in the browser (TreeWalker + Range) against reference widths.
 - Don't click the RD dialog's Download (builds a CSV; needs user permission).
+
+## Git / repo
+- Nothing after the first commit is committed yet (profiles, reports page, AIF reports, shared dialogs are all uncommitted).
+- Remote: https://github.com/DhirajPrajapati/PMS.git (`origin`), branch `main` tracks `origin/main`.
+- First commit `2c6c032` ("Build PMS portal: strategy cards, My Strategies, AIF cards, themed mock APIs") holds all 58 files. `.gitignore` excludes node_modules and dist.
+- Local git identity (repo-only): DhirajPrajapati / prajapatidheeraj005@gmail.com. Commit/push only when the user asks. Commit messages end with `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`.
 
 ## Folder structure (`src/`)
 ```
 App.tsx                     page: numbered sections + "API responses" toggle
 api/                        pagination.ts (paginate, Paged, PageParams, query, wait)
                             strategies.ts (3 PMS endpoints), myStrategies.ts, aifTopup.ts,
-                            aifRedemption.ts, redemptions.ts (pending partial, paginated), rdFile.ts
+                            aifRedemption.ts, redemptions.ts (pending partial, paginated), rdFile.ts,
+                            profiles.ts (My Profile cards), reports.ts (PMS/AIF-old reports: holders, di-codes,
+                            catalog, advanced-options, generate), aifReports.ts (AIF tab: schemes, options, generate)
 hooks/useApiResource.ts     calls an API once; returns {data, loading, error}
 theme/                      designTokens.ts, colors.ts, pms.ts, index.ts (see Conventions)
 utils/format.ts             rem, formatInr/Crore/Aum/Short/Pct/Return, formatDate; utils/tags.ts (PMS/AIF tag colours)
@@ -31,11 +40,21 @@ components/
     MyStrategyCard/         MyStrategyCard.tsx (+tag S-curve, perf chart, range pills), …Skeleton, index
     AifTopupCard/           AifTopupCard.tsx (also exports AifCardShell, AifHeader), …Skeleton, index
     AifRedemptionCard/      AifRedemptionCard.tsx (Full/Partial radios, total, Redeem), …Skeleton (reuses topup's), index
-  common/                   CardCarousel, Collapse (animated, exports EASE/COLLAPSE_MS), CheckDot, RadioOption,
+  common/                   DialogShell (shared dialog frame: accent bar, white header w/ chip close, footer — use for ALL dialogs),
+                            ConfirmDialog (on DialogShell; also exports glossButton), CardCarousel, Collapse (animated, exports EASE/COLLAPSE_MS), CheckDot, RadioOption,
                             Logo, Sparkline, PerformanceChart, Skeleton (Bone/SkeletonCard, abs placement x/y/right),
                             ApiResponsePanel (JSON highlight, copy), PageSection (+ResponsesVisibleContext)
   MyStrategiesSection.tsx   header, grid/list toggle, HScroller, MyStrategiesSkeleton; StrategyTable.tsx (list view)
-  PendingRedemptionsDialog.tsx , RdFileDialog.tsx
+  PendingRedemptionsDialog.tsx , RdFileDialog.tsx (now built on common/DialogShell)
+  ProfilesSection.tsx       My Profile cards (single select, click again deselects); cards/ProfileCard/
+  reports/                  Investment Reports page (hash route #/reports; "Investment Reports page →" link in portal header)
+    ReportsPage.tsx         header + PMS/AIF ProductToggle; PMS = 4-step flow (holder + DI-code dropdowns side by side,
+                            categories, report cards with "Advance Options", criteria, download/email), AIF = <AifReports/>
+    AifReports.tsx          AIF tab: search + All/CAT II/CAT III, scheme cards, folio chips (mobile: dropdown + reset icon),
+                            holders/broker/value panel, single-select report tiles, SOA criteria, Download via Email / Direct Download,
+                            mobile bottom-sheet (Drawer) for report picking
+    AdvancedOptionsDialog   section list left (dropdown on mobile) + radios; opens on "Advance Options"
+    ReportsStepper, ReportsParts (scaled rem, R colours, Chip, SectionCard), SelectField (pill dropdown), DateField
 ```
 Each card folder's `index.ts` exports `{Card, CardSkeleton, types}`.
 
@@ -46,7 +65,8 @@ Each card folder's `index.ts` exports `{Card, CardSkeleton, types}`.
 4. Invested Strategies — `GET /api/pms/my-strategies` (4 rows; grid + list table)
 5. AIF Top-up — `GET /api/aif/topup` (2 funds)
 6. AIF Redemption — `GET /api/aif/redemption` (1 fund)
-7. Redemption Dialog APIs — response-only: pending partial redemptions (4 rows) and RD file
+7. My Profile — `GET /api/profiles` (4 cards; selectable)
+8. Redemption Dialog APIs — response-only: pending partial redemptions (4 rows) and RD file
 Wide screens (>75rem): UI left, sticky API-response panel right (toggle top-right hides all); narrower: panel below.
 Every section shows skeletons until its API responds. Skeletons are laid out from measured coordinates of the real cards (PMS purchase 388px / summary 242 / redemption 325 tall; My Strategy 236×415).
 
@@ -57,9 +77,21 @@ Every section shows skeletons until its API responds. Skeletons are laid out fro
 - AIF Top-up: collapsed summary row ↔ expanded sidebar + unit-class table (tick rows, Make Payment), smooth Collapse animation.
 - AIF Redemption: per-unit Full/Partial radios; Full amount = invested value, Partial input capped at invested value; Total Redemption Amount; Redeem disabled until total > 0 and no empty Partial.
 
+## Reports page behaviours (user-driven rules)
+- **Use the shared `DialogShell` for every dialog** (Advanced Options, "Start a new report?" confirm, RD file). The user asked for this repeatedly; don't build separate dialog chrome.
+- PMS flow: sections 2–4 reveal progressively with fade-up + smooth scroll; X on "Report details" opens ConfirmDialog ("Start a new report?" / Keep report / Reset report); confirming fades sections out (.35s) then resets everything (holder kept). Advance Options appears on every selected report; applied values are sent as `advanced_options` in the generate request.
+- Holder and DI-code are dropdowns side by side on desktop; DI codes come from `GET /api/reports/holders/:id/di-codes`. API panels show holders, di-codes, catalog, advanced-options, request body, response.
+- AIF tab: only ONE report selectable at a time (tiles look like checkboxes, behave like radios); criteria (consolidate by + from/to dates) appear only for SOA and are required before the download buttons enable; card/criteria use MUI Collapse with `EASE = cubic-bezier(.2,.7,.2,1)`; tab switches fade in (PMS stepper fades opacity-only so sticky still works).
+- Product toggle: 141×44, pills PMS 72 / AIF 61 wide, 12px bold. Sticky stepper must stay a direct child of the page container.
+- All animations should be smooth (user rule): prefer Collapse/keyframe fades with respect for `prefers-reduced-motion`.
+- Not built: mobile app header (hamburger/logo/avatar) from the reports screenshots; the user's screen-recording of the reset animation couldn't be read (macOS temp file gone), so the reset fade is my own design.
+- `RadioOption.tsx` had a pre-existing bug (single-quoted `'${...}'` border) — fixed.
+
 ## Not done / ideas for next session
 - Wire unconnected actions: My Strategy `Performance` / `Invest More`, AIF `Make Payment`, AIF `Redeem` (handlers exist as props, nothing attached), table filter icon is decorative.
 - Not verified: narrow-screen layouts of the AIF cards, skeleton swap on mobile, side-panel sticky behaviour on short viewports, animation smoothness (couldn't observe in a background tab).
 - Mock delays: PMS 600/450/750ms, others 500ms, dialogs 400ms (a temporary 60s hold was used to inspect skeletons, then reverted).
 - Open question from user: AIF redemption screenshot showed the Redeem footer scrolling with the table; I kept it fixed under the table.
 - Possible cleanup: `AifCardShell` still lives in AifTopupCard.tsx (could move to common/); `ViewToggle`/`HScroller` still inside MyStrategiesSection.
+- Unused-file audit (no source file is orphaned). Deletion candidates awaiting user's yes: `src/assets/{hero.png,react.svg,vite.svg}`, `public/icons.svg`, stale `MyStrategiesData` type, and the default Vite `README.md` (replace with project README).
+- Theme note: screens keep their measured colours under `tokens.pms` (e.g. maroon `#7a1f20`) instead of the pasted palette's `#93161E`, to avoid visual shifts; the MUI palette uses the pasted tokens. `zIndex.tooltip: 150` and breakpoint `2xl` are intentionally not passed to MUI.
