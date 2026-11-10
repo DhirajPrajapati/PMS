@@ -14,13 +14,14 @@ Dev server: `npm run dev` → http://localhost:5173/. Typecheck: `npx tsc -b` (r
 - `highcharts-react-official` is CJS: use `(Mod as {default?}).default ?? Mod`.
 - macOS `sed -i` fails on patterns with parens/quotes → use python3 or Edit.
 - Testing in browser: `resize_window` doesn't change viewport; test narrow widths via same-origin iframe. Background tabs don't advance CSS transitions/rAF, so can't measure animations.
-- Reports-page screenshots are 2x captures at ~87.5% browser zoom (CSS px = image px / 1.75). `components/reports/ReportsParts.tsx` exports a **scaled** `rem(px)` = `baseRem(px*2/1.75)` for those pages; direct CSS px (mobile ≈ image px / 1.57) use `rem as css` from `utils/format`. Calibrate fonts by measuring rendered text widths in the browser (TreeWalker + Range) against reference widths.
+- Reports-page screenshots are 2x captures at ~87.5% browser zoom (CSS px = image px / 1.75). `components/reports/ReportsParts.tsx` exports a **scaled** `rem(px)` = `baseRem(px*2/1.75)` for those pages; direct CSS px (mobile ≈ image px / 1.57) use `rem as css` from `utils/format`. **Decision (user chose to keep it):** the `baseRem` alias in ReportsParts stays; new code outside Reports uses plain `rem` from `utils/format` only. Calibrate fonts by measuring rendered text widths in the browser (TreeWalker + Range) against reference widths.
 - Don't click the RD dialog's Download (builds a CSV; needs user permission).
 
 ## Git / repo
-- Nothing after the first commit is committed yet (profiles, reports page, AIF reports, shared dialogs are all uncommitted).
+- Commits: `2c6c032` first build; `f4f561d` profiles, reports page, shared dialogs; `27d1e45` AIF My Strategies card + Pms/Aif split (local, **not pushed** yet; `main` is 1 ahead of `origin/main`).
+- Untracked and deliberately left out of commits: `.agents/`, `.claude/`, `skills-lock.json`.
 - Remote: https://github.com/DhirajPrajapati/PMS.git (`origin`), branch `main` tracks `origin/main`.
-- First commit `2c6c032` ("Build PMS portal: strategy cards, My Strategies, AIF cards, themed mock APIs") holds all 58 files. `.gitignore` excludes node_modules and dist.
+- First commit `2c6c032` ("Build PMS portal: strategy cards, My Strategies, AIF cards, themed mock APIs") holds the original 58 files. `.gitignore` excludes node_modules and dist.
 - Local git identity (repo-only): DhirajPrajapati / prajapatidheeraj005@gmail.com. Commit/push only when the user asks. Commit messages end with `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`.
 
 ## Folder structure (`src/`)
