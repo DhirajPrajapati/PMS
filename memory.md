@@ -9,7 +9,7 @@ Dev server: `npm run dev` → http://localhost:5173/. Typecheck: `npx tsc -b` (r
 - **rem everywhere**: `rem(px)` helper in `src/utils/format.ts` (px/16). Media queries in rem (`48rem` cards carousel, `40rem` My Strategies, `75rem` response side panel).
 - Font Mulish; page bg `#f9f5f2`; maroon `#7a1f20`; gold `#a07a3c`; line `#ece6e0`.
 - Mock response format (user's required format): `{ "status":"success", "message":"Fetched Successfully", "data": {...} }`.
-- Pagination lives **only in the mock APIs** (user asked for no pagination UI): request `?page=&limit=` (default limit 10, `DEFAULT_LIMIT` in api/pagination.ts), response `data` has `total, page, limit, total_pages` (My Strategies uses camelCase `totalPages` and keeps `total`, `asOnDate`, `los`, `CliendCode` exactly as pasted). The UI just loads page 1; there is no Pagination component.
+- Pagination lives **only in the mock APIs** (user asked for no pagination UI): request `?page=&limit=` (default limit 10, `DEFAULT_LIMIT` in api/pagination.ts), response `data` has `total, page, limit, total_pages` (My Strategies uses camelCase `totalPages` and keeps `total`, `asOnDate`, `los`, `CliendCode` exactly as pasted). The My Strategies UI just loads page 1. **Exception:** the Performance → Transaction tab has a real pager (user's design) using `common/Pagination`, with page/sort as API params.
 - Mobile: cards render as a **stack carousel** (front card full size, neighbours scaled .94 peeking both sides, simple swipe, no tilt).
 - `highcharts-react-official` is CJS: use `(Mod as {default?}).default ?? Mod`.
 - macOS `sed -i` fails on patterns with parens/quotes → use python3 or Edit.
@@ -18,7 +18,7 @@ Dev server: `npm run dev` → http://localhost:5173/. Typecheck: `npx tsc -b` (r
 - Don't click the RD dialog's Download (builds a CSV; needs user permission).
 
 ## Git / repo
-- Commits: `2c6c032` first build; `f4f561d` profiles, reports page, shared dialogs; `27d1e45` AIF My Strategies card + Pms/Aif split (local, **not pushed** yet; `main` is 1 ahead of `origin/main`).
+- Commits: `2c6c032` first build; `f4f561d` profiles, reports page, shared dialogs; `27d1e45` AIF My Strategies card + Pms/Aif split; `a929f7c` memory update; `40642b6` Performance Summary tabs + AIF View Statement + shared components (all local, **not pushed**).
 - Untracked and deliberately left out of commits: `.agents/`, `.claude/`, `skills-lock.json`.
 - Remote: https://github.com/DhirajPrajapati/PMS.git (`origin`), branch `main` tracks `origin/main`.
 - First commit `2c6c032` ("Build PMS portal: strategy cards, My Strategies, AIF cards, themed mock APIs") holds the original 58 files. `.gitignore` excludes node_modules and dist.
@@ -32,8 +32,10 @@ api/                        pagination.ts (paginate, Paged, PageParams, query, w
                             aifRedemption.ts, redemptions.ts (pending partial, paginated), rdFile.ts,
                             profiles.ts (My Profile cards), reports.ts (PMS/AIF-old reports: holders, di-codes,
                             catalog, advanced-options, generate), aifReports.ts (AIF tab: schemes, options, generate)
-hooks/useApiResource.ts     calls an API once; returns {data, loading, error}
-theme/                      designTokens.ts, colors.ts, pms.ts, index.ts (see Conventions)
+hooks/                      useApiResource (call once on mount), useServerList (refetch on query change, keeps old data while busy, `gen` re-triggers fade),
+                            useToggleSet (open ids), useSort (nextSort, compareValues, useClientSort)
+theme/                      designTokens.ts, colors.ts, pms.ts, index.ts (see Conventions); motion.ts (EASE, fadeUp(i), fadeIn: reduced-motion safe)
+utils/responsive.ts         r(desktop, mobile) -> {xs, sm} rem, reset, MOBILE_Q ('(max-width:40rem)')
 utils/format.ts             rem, formatInr/Crore/Aum/Short/Pct/Return, formatDate; utils/tags.ts (PMS/AIF tag colours)
 components/
   cards/
@@ -45,6 +47,9 @@ components/
                             ConfirmDialog (on DialogShell; also exports glossButton), CardCarousel, Collapse (animated, exports EASE/COLLAPSE_MS), CheckDot, RadioOption,
                             Logo, Sparkline, PerformanceChart, Skeleton (Bone/SkeletonCard, abs placement x/y/right),
                             ApiResponsePanel (JSON highlight, copy), PageSection (+ResponsesVisibleContext)
+                            Performance-era shared UI: Tabs, DonutChart/XirrChart/ReturnsBarChart/TrajectoryChart (Highcharts), StatCard, Panel,
+                            IconChip, Avatar, SegmentedToggle, Pill (tag|badge), Pagination, DownloadButton, SortHeader, ExpandableItem (+FieldGrid,
+                            RotatingChevron), BusyRegion, LabelValueList, ChipGroup, EmptyState, PageShell (fixed header + scrolling body), TopBar, Breadcrumb
   MyStrategiesSection.tsx   header, grid/list toggle, HScroller, MyStrategiesSkeleton; StrategyTable.tsx (list view)
   PendingRedemptionsDialog.tsx , RdFileDialog.tsx (now built on common/DialogShell)
   ProfilesSection.tsx       My Profile cards (single select, click again deselects); cards/ProfileCard/
@@ -91,13 +96,24 @@ Every section shows skeletons until its API responds. Skeletons are laid out fro
 - `RadioOption.tsx` had a pre-existing bug (single-quoted `'${...}'` border) — fixed.
 
 ## Strategy Performance Summary page
-- Route `#/performance/<clientCode>` (App.tsx hash router), opened by the My Strategies `Performance` button (card + list table). `components/performance/PerformancePage.tsx`, mock `api/performanceSummary.ts`, colours in `perfPalette` (theme/pms.ts). Only the Summary tab has content. Layout: 100vh column, header fixed, only the content area scrolls. Reusable pieces in `components/common/`: Tabs (generic, underline, scrolls sideways), DonutChart (Highcharts pie + centre content), StatCard, Panel, IconChip, Avatar. Desktop css = screenshot-displayed px * 0.691; mobile css = image px / 1.57. Fonts were calibrated by measuring text widths (desktop body ~12.3px, mobile ~10.5-12px).  the ICICI logo is a text approximation.
+- Route `#/performance/<clientCode>`, opened by the My Strategies `Performance` button. `components/performance/`: PerformancePage (header, tabs, Summary/XIRR/Allocation tabs), PerformanceTab, HoldingTab, TransactionTab, shared.tsx (KpiRow, TabFrame, DonutSkeleton; re-exports r/reset/MOBILE_Q). Mock API `api/performanceSummary.ts`, colours in `perfPalette` (theme/pms.ts). Desktop css = screenshot px * 0.691; mobile css = image px / 1.57.
+- Six tabs: Summary, XIRR, Allocation, Performance, Holding, Transaction. **Each tab has its own API call and skeleton** (user rule). Charts must be Highcharts. UI/font size must "match exactly" the screenshots and use the theme; smooth animations expected.
+- Performance tab is shared by PMS/AIF via `variant` + label/value arrays. Trajectory, Performance Summary and Profit & Loss belong to the XIRR view only, NOT TWRR (user correction).
+- Holding: Holdings Detail on mobile auto-scrolls (sliding track). Transaction: server-side sort/page (`fetchPerformanceTransactions`), expandable rows (desktop detail columns, mobile detail card), first row sort = date desc.
+- Active Summary (XIRR view) columns are 1.15:1:1:1.85fr so it fills the card width.
+
+## AIF View Statement page
+- Route `#/statement/<folio>`, opened from the AIF My Strategies card "View Statement". `performance/AifStatementPage.tsx`, mock `api/aifStatement.ts` (statement + separate transactions call with filter/sort/dir params).
+- Desktop: header, 3 KPI cards (KpiRow `styles={[0,2,3]} compact`), Capital Contribution + Valuation panels, Transaction Details table with filter chips + sortable columns. Mobile: stacked header, KPI carousel, expandable rows, "Sort transactions" dropdown + direction button. Default sort = date asc.
+- Not built: mobile KPI carousel uses the same row as desktop style tiles; desktop panel subtitles use the mobile wording instead of "Lorem Ipsum".
 
 ## Not done / ideas for next session
-- Wire unconnected actions: My Strategy `Performance` / `Invest More`, AIF `Make Payment`, AIF `Redeem` (handlers exist as props, nothing attached), table filter icon is decorative.
+- Wire unconnected actions: My Strategy `Invest More`, AIF `Make Payment`, AIF `Redeem` (handlers exist as props, nothing attached), table filter icon is decorative.
 - Not verified: narrow-screen layouts of the AIF cards, skeleton swap on mobile, side-panel sticky behaviour on short viewports, animation smoothness (couldn't observe in a background tab).
 - Mock delays: PMS 600/450/750ms, others 500ms, dialogs 400ms (a temporary 60s hold was used to inspect skeletons, then reverted).
 - Open question from user: AIF redemption screenshot showed the Redeem footer scrolling with the table; I kept it fixed under the table.
 - Possible cleanup: `AifCardShell` still lives in AifTopupCard.tsx (could move to common/); `ViewToggle`/`HScroller` still inside MyStrategiesSection.
 - Unused-file audit (no source file is orphaned). Deletion candidates awaiting user's yes: `src/assets/{hero.png,react.svg,vite.svg}`, `public/icons.svg`, stale `MyStrategiesData` type, and the default Vite `README.md` (replace with project README).
 - Theme note: screens keep their measured colours under `tokens.pms` (e.g. maroon `#7a1f20`) instead of the pasted palette's `#93161E`, to avoid visual shifts; the MUI palette uses the pasted tokens. `zIndex.tooltip: 150` and breakpoint `2xl` are intentionally not passed to MUI.
+- Refactor leftovers: one-off fades (`perf-fade`, `rpt-step-fade`, `adv-fade`, `aif-fade`) could use `theme/motion`; `StrategyTable`/Performance-page tables not on `SortHeader`; reports `Pager` (dots) intentionally separate from `common/Pagination`; no `PageHeader`/`TableSkeleton` abstractions (too different per page).
+- Download buttons on Holding/Transaction are visual only (no handler). Transaction mock "PRO" row type text ("Profit distribution") is invented; ask the user for real wording.
