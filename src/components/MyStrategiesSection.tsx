@@ -135,7 +135,13 @@ function HScroller({ children }: { children: React.ReactNode[] }) {
 export default function MyStrategiesSection({ total, asOnDate, strategies }: Props) {
   const isMobile = useMediaQuery('(max-width:40rem)')
   const [view, setView] = useState<View>('grid')
-  const cards = strategies.map((s) => <MyStrategyCard key={s.id} strategy={s} />)
+  const openPerformance = (s: MyStrategy) => {
+    window.location.hash = `#/performance/${encodeURIComponent(s.id)}`
+  }
+  const openStatement = (s: MyStrategy) => {
+    window.location.hash = `#/statement/${encodeURIComponent(s.aif?.folio || s.id)}`
+  }
+  const cards = strategies.map((s) => <MyStrategyCard key={s.id} strategy={s} onPerformance={openPerformance} onStatement={openStatement} />)
 
   const dateOnly = asOnDate.split(',')[0]
 
@@ -176,7 +182,7 @@ export default function MyStrategiesSection({ total, asOnDate, strategies }: Pro
       </Box>
 
       {view === 'list' && !isMobile ? (
-        <StrategyTable strategies={strategies} />
+        <StrategyTable strategies={strategies} onPerformance={openPerformance} />
       ) : isMobile ? (
         <CardCarousel arrows slideWidth={`min(calc(100vw - ${rem(28)}), ${rem(512)})`} dotsMargin={29} dotsGap={9.5}>
           {cards}

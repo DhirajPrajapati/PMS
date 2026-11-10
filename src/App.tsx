@@ -13,6 +13,8 @@ import { PmsCardSkeleton, PmsCard, type CardVariant, type PmsStrategy } from './
 import CardCarousel from './components/common/CardCarousel'
 import PageSection, { ResponsesVisibleContext } from './components/common/PageSection'
 import MyStrategiesSection, { MyStrategiesSkeleton } from './components/MyStrategiesSection'
+import AifStatementPage from './components/performance/AifStatementPage'
+import PerformancePage from './components/performance/PerformancePage'
 import ReportsPage from './components/reports/ReportsPage'
 import ProfilesSection from './components/ProfilesSection'
 import PendingRedemptionsDialog from './components/PendingRedemptionsDialog'
@@ -177,9 +179,12 @@ function PortalPage() {
   )
 }
 
-const readPage = () => (window.location.hash.startsWith('#/reports') ? 'reports' : 'portal')
+const readPage = () => {
+  const h = window.location.hash
+  return h.startsWith('#/reports') ? 'reports' : h.startsWith('#/performance') ? 'performance' : h.startsWith('#/statement') ? 'statement' : 'portal'
+}
 
-/** Tiny hash router: "#/reports" opens Investment Reports, anything else is the component gallery. */
+/** Tiny hash router: "#/reports" opens Investment Reports, "#/performance/<code>" the Strategy Performance Summary, "#/statement/<folio>" the AIF statement, anything else is the component gallery. */
 export default function App() {
   const [page, setPage] = useState(readPage)
   useEffect(() => {
@@ -190,5 +195,8 @@ export default function App() {
     window.addEventListener('hashchange', on)
     return () => window.removeEventListener('hashchange', on)
   }, [])
-  return page === 'reports' ? <ReportsPage /> : <PortalPage />
+  if (page === 'reports') return <ReportsPage />
+  if (page === 'statement') return <AifStatementPage folio={decodeURIComponent(window.location.hash.split('/')[2] ?? '')} />
+  if (page === 'performance') return <PerformancePage clientCode={decodeURIComponent(window.location.hash.split('/')[2] ?? '')} />
+  return <PortalPage />
 }

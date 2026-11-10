@@ -90,6 +90,9 @@ Every section shows skeletons until its API responds. Skeletons are laid out fro
 - Not built: mobile app header (hamburger/logo/avatar) from the reports screenshots; the user's screen-recording of the reset animation couldn't be read (macOS temp file gone), so the reset fade is my own design.
 - `RadioOption.tsx` had a pre-existing bug (single-quoted `'${...}'` border) — fixed.
 
+## Strategy Performance Summary page
+- Route `#/performance/<clientCode>` (App.tsx hash router), opened by the My Strategies `Performance` button (card + list table). `components/performance/PerformancePage.tsx`, mock `api/performanceSummary.ts`, colours in `perfPalette` (theme/pms.ts). Only the Summary tab has content. Layout: 100vh column, header fixed, only the content area scrolls. Reusable pieces in `components/common/`: Tabs (generic, underline, scrolls sideways), DonutChart (Highcharts pie + centre content), StatCard, Panel, IconChip, Avatar. Desktop css = screenshot-displayed px * 0.691; mobile css = image px / 1.57. Fonts were calibrated by measuring text widths (desktop body ~12.3px, mobile ~10.5-12px).  the ICICI logo is a text approximation.
+
 ## Not done / ideas for next session
 - Wire unconnected actions: My Strategy `Performance` / `Invest More`, AIF `Make Payment`, AIF `Redeem` (handlers exist as props, nothing attached), table filter icon is decorative.
 - Not verified: narrow-screen layouts of the AIF cards, skeleton swap on mobile, side-panel sticky behaviour on short viewports, animation smoothness (couldn't observe in a background tab).
