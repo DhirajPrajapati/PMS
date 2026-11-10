@@ -1,3 +1,5 @@
 export { default as MyStrategyCard } from './MyStrategyCard'
-export * from './MyStrategyCard'
+export { default as PmsStrategyCard } from './PmsStrategyCard'
+export { default as AifStrategyCard } from './AifStrategyCard'
+export * from './types'
 export { default as MyStrategyCardSkeleton } from './MyStrategyCardSkeleton'

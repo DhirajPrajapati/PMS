@@ -37,7 +37,7 @@ utils/format.ts             rem, formatInr/Crore/Aum/Short/Pct/Return, formatDat
 components/
   cards/
     PmsCard/                PmsCard.tsx (purchase|summary|redemption), PmsCardSkeleton.tsx, index.ts
-    MyStrategyCard/         MyStrategyCard.tsx (+tag S-curve, perf chart, range pills), …Skeleton, index
+    MyStrategyCard/         MyStrategyCard.tsx (dispatcher: aif ? Aif : Pms), PmsStrategyCard, AifStrategyCard, StrategyCardShell (frame+tag+header), shared.ts (C, PX, font, tile styles), types.ts, …Skeleton, index
     AifTopupCard/           AifTopupCard.tsx (also exports AifCardShell, AifHeader), …Skeleton, index
     AifRedemptionCard/      AifRedemptionCard.tsx (Full/Partial radios, total, Redeem), …Skeleton (reuses topup's), index
   common/                   DialogShell (shared dialog frame: accent bar, white header w/ chip close, footer — use for ALL dialogs),
@@ -76,6 +76,8 @@ Every section shows skeletons until its API responds. Skeletons are laid out fro
 - My Strategy card: Invested/AUM/XIRR tiles, Highcharts Benchmark vs Portfolio columns, 1M/3M/6M/1Y/All pills (no per-click fetch; all ranges in response), PMS/AIF corner tag. List view = table with Actions (Performance, Invest More). ≤40rem: single card carousel, toggle hidden.
 - AIF Top-up: collapsed summary row ↔ expanded sidebar + unit-class table (tick rows, Make Payment), smooth Collapse animation.
 - AIF Redemption: per-unit Full/Partial radios; Full amount = invested value, Partial input capped at invested value; Total Redemption Amount; Redeem disabled until total > 0 and no empty Partial.
+
+- My Strategies cards: 280px wide (`CARD_W`), side padding `PX=10.5`, stretch to equal height. AIF rows (`strategy.aif` from API fields folio/category/absReturn/absReturnPct/trend/navDate/nav) render `AifStrategyCard` (own component, shares `StrategyCardShell` with `PmsStrategyCard`): Folio+CAT chips, Invested/AUM tiles, Abs. Return + sparkline, As on Date | NAV, View Statement / Top up. Screenshot scale for this section is 1.77 (CSS px = image px / 1.77).
 
 ## Reports page behaviours (user-driven rules)
 - **Use the shared `DialogShell` for every dialog** (Advanced Options, "Start a new report?" confirm, RD file). The user asked for this repeatedly; don't build separate dialog chrome.

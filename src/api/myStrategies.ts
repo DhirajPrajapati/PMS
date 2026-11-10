@@ -18,6 +18,20 @@ export interface ApiLoRow {
   xirr: number
   benchmark: ApiReturns
   portfolio: ApiReturns
+  /** AIF rows only */
+  folio?: string
+  /** AIF rows only, e.g. "CAT II" */
+  category?: string
+  /** AIF rows only: absolute return in rupees (signed) */
+  absReturn?: number
+  /** AIF rows only: absolute return in percent (signed) */
+  absReturnPct?: number
+  /** AIF rows only: sparkline series for the absolute return */
+  trend?: number[]
+  /** AIF rows only: ISO date of the NAV */
+  navDate?: string
+  /** AIF rows only: NAV per unit */
+  nav?: number
 }
 
 /** GET /api/pms/my-strategies */
@@ -57,16 +71,6 @@ const LOS: ApiLoRow[] = [
     portfolio: returns('10.23%', '12.45%', '14.67%', '16.89%', '30.2%'),
   },
   {
-    type: 'AIF',
-    CliendCode: 'DI0002',
-    strategy: 'Enhanced Dynamic Equity Fund',
-    invested: 450000000.0,
-    aum: 12400000000.0,
-    xirr: 18.4,
-    benchmark: returns('10.38%', '12.1%', '15.62%', '22.4%', '48.73%'),
-    portfolio: returns('9.23%', '13.46%', '14.2%', '25.11%', '55.34%'),
-  },
-  {
     type: 'PMS',
     CliendCode: 'DI0003',
     strategy: 'PMS Growth Fund',
@@ -75,6 +79,23 @@ const LOS: ApiLoRow[] = [
     xirr: 16.2,
     benchmark: returns('10.38%', '11.7%', '13.9%', '19.6%', '41.05%'),
     portfolio: returns('9.23%', '12.8%', '15.4%', '21.3%', '44.9%'),
+  },
+  {
+    type: 'AIF',
+    CliendCode: 'DI0002',
+    strategy: 'Corporate Credit Opportunities Fund AIF II',
+    invested: 20000000.0,
+    aum: 24500000.0,
+    xirr: 22.5,
+    benchmark: returns('10.38%', '12.1%', '15.62%', '22.4%', '48.73%'),
+    portfolio: returns('9.23%', '13.46%', '14.2%', '25.11%', '55.34%'),
+    folio: '7400001204',
+    category: 'CAT II',
+    absReturn: 4500000.0,
+    absReturnPct: 22.5,
+    trend: [14, 15, 15.5, 18, 29, 19, 22, 25, 23, 28, 26, 31, 29, 33, 30, 35],
+    navDate: '2026-06-03',
+    nav: 115.5,
   },
   {
     type: 'PMS',
@@ -120,6 +141,18 @@ function mapRow(r: ApiLoRow): MyStrategy {
     ranges,
     defaultRange: ranges[0],
     performance,
+    aif:
+      r.type.toUpperCase() === 'AIF'
+        ? {
+            folio: r.folio ?? '',
+            category: r.category ?? '',
+            absReturn: r.absReturn ?? 0,
+            absReturnPct: r.absReturnPct ?? 0,
+            trend: r.trend ?? [],
+            navDate: r.navDate ?? '',
+            nav: r.nav ?? 0,
+          }
+        : undefined,
   }
 }
 

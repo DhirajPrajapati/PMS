@@ -9,7 +9,7 @@ import StrategyTable from './StrategyTable'
 import { colors, shadows } from '../theme'
 
 const MOBILE = '@media (max-width:40rem)'
-const CARD_W = 236
+const CARD_W = 280
 const GAP = 13
 
 type View = 'grid' | 'list'
@@ -118,7 +118,7 @@ function HScroller({ children }: { children: React.ReactNode[] }) {
         ref={ref}
         onScroll={update}
         sx={{
-          display: 'flex', alignItems: 'flex-start', gap: rem(GAP), px: rem(14), pb: rem(4), overflowX: 'auto',
+          display: 'flex', alignItems: 'stretch', gap: rem(GAP), px: rem(14), pb: rem(4), overflowX: 'auto',
           scrollSnapType: 'x proximity', scrollPaddingInline: rem(14), scrollbarWidth: 'none', '&::-webkit-scrollbar': { display: 'none' },
         }}
       >
