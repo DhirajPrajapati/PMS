@@ -18,7 +18,7 @@ Dev server: `npm run dev` → http://localhost:5173/. Typecheck: `npx tsc -b` (r
 - Don't click the RD dialog's Download (builds a CSV; needs user permission).
 
 ## Git / repo
-- Commits: `2c6c032` first build; `f4f561d` profiles, reports page, shared dialogs; `27d1e45` AIF My Strategies card + Pms/Aif split; `a929f7c` memory update; `40642b6` Performance Summary tabs + AIF View Statement + shared components (all local, **not pushed**).
+- Commits: `2c6c032` first build; `f4f561d` profiles, reports page, shared dialogs; `27d1e45` AIF My Strategies card + Pms/Aif split; `a929f7c` memory update; `40642b6` Performance Summary tabs + AIF View Statement + shared components; `f459f03` new mock API contracts (Performance tabs + My Strategies). Pushed to origin/main.
 - Untracked and deliberately left out of commits: `.agents/`, `.claude/`, `skills-lock.json`.
 - Remote: https://github.com/DhirajPrajapati/PMS.git (`origin`), branch `main` tracks `origin/main`.
 - First commit `2c6c032` ("Build PMS portal: strategy cards, My Strategies, AIF cards, themed mock APIs") holds the original 58 files. `.gitignore` excludes node_modules and dist.
@@ -27,7 +27,8 @@ Dev server: `npm run dev` → http://localhost:5173/. Typecheck: `npx tsc -b` (r
 ## Folder structure (`src/`)
 ```
 App.tsx                     page: numbered sections + "API responses" toggle
-api/                        pagination.ts (paginate, Paged, PageParams, query, wait)
+api/                        (performanceSummary.ts + myStrategies.ts follow the user's pasted v2 contracts, see "Mock API contracts v2")
+                            pagination.ts (paginate, Paged, PageParams, query, wait)
                             strategies.ts (3 PMS endpoints), myStrategies.ts, aifTopup.ts,
                             aifRedemption.ts, redemptions.ts (pending partial, paginated), rdFile.ts,
                             profiles.ts (My Profile cards), reports.ts (PMS/AIF-old reports: holders, di-codes,
@@ -102,6 +103,13 @@ Every section shows skeletons until its API responds. Skeletons are laid out fro
 - Holding: Holdings Detail on mobile auto-scrolls (sliding track). Transaction: server-side sort/page (`fetchPerformanceTransactions`), expandable rows (desktop detail columns, mobile detail card), first row sort = date desc.
 - Active Summary (XIRR view) columns are 1.15:1:1:1.85fr so it fills the card width.
 
+## Mock API contracts v2 (pasted by user, base `api/v2/dashboard/portfolio/`)
+- Mocks return the **raw backend shape** (numbers, DD/MM/YYYY dates); display formatting lives in `components/performance/adapters.ts` (inr, signed values, T-1 as-on date, view-models for each tab). Mock functions are still named `fetchPerformance*` (no real HTTP; URLs only in comments/API panel).
+- Endpoints: `strategies/{page}/{size}` -> My Strategies (`data.strategies[]` with `clientCode`, `trends[{duration,benchmark,portfolio}]`; paging is in the path, response has only `total`, `asOnDate`); `{clientCode}/performance-summary` -> Summary; `xirrtrends` -> XIRR (benchmark1m/portfolio1m...All); `allocation` -> Allocation (`sector[]`, `security[]`); `ror-trends/{ror}` -> Performance tab; `transaction-history` -> Transaction (+ mock-added paging fields and page/limit/sort/dir params); `holding-breakdown` had **no pasted response**, Holding keeps its old mock.
+- Performance tab: XIRR/TWRR toggle calls `fetchPerformanceRor(clientCode, 'xirr'|'twrr')` (useServerList, old view dimmed while loading). `rorTrends` is one series, so the XIRR trajectory and TWRR bars show portfolio only (benchmark series dropped; `ReturnsBarChart.benchmark` is optional). PMS/AIF label sets are in adapters (`LABELS`).
+- Header call (`fetchPerformanceHeader`) is not in the contract; kept as before. Tabs get `strategy` from it for subtitles.
+- Gaps: transactions have no amount/Trading A/c/DP (amount = units*unitPrice; "PRO" wording invented); AIF card extras (folio, category, absReturn, trend, navDate, nav) are optional extra fields on strategy rows, not in the contract; provider name is the constant 'ICICI Prudential'.
+
 ## AIF View Statement page
 - Route `#/statement/<folio>`, opened from the AIF My Strategies card "View Statement". `performance/AifStatementPage.tsx`, mock `api/aifStatement.ts` (statement + separate transactions call with filter/sort/dir params).
 - Desktop: header, 3 KPI cards (KpiRow `styles={[0,2,3]} compact`), Capital Contribution + Valuation panels, Transaction Details table with filter chips + sortable columns. Mobile: stacked header, KPI carousel, expandable rows, "Sort transactions" dropdown + direction button. Default sort = date asc.
@@ -116,4 +124,5 @@ Every section shows skeletons until its API responds. Skeletons are laid out fro
 - Unused-file audit (no source file is orphaned). Deletion candidates awaiting user's yes: `src/assets/{hero.png,react.svg,vite.svg}`, `public/icons.svg`, stale `MyStrategiesData` type, and the default Vite `README.md` (replace with project README).
 - Theme note: screens keep their measured colours under `tokens.pms` (e.g. maroon `#7a1f20`) instead of the pasted palette's `#93161E`, to avoid visual shifts; the MUI palette uses the pasted tokens. `zIndex.tooltip: 150` and breakpoint `2xl` are intentionally not passed to MUI.
 - Refactor leftovers: one-off fades (`perf-fade`, `rpt-step-fade`, `adv-fade`, `aif-fade`) could use `theme/motion`; `StrategyTable`/Performance-page tables not on `SortHeader`; reports `Pager` (dots) intentionally separate from `common/Pagination`; no `PageHeader`/`TableSkeleton` abstractions (too different per page).
+- Ask user for a `holding-breakdown` response to wire the Holding tab; `KpiCard` type still lives in api/performanceSummary.ts (used by aifStatement).
 - Download buttons on Holding/Transaction are visual only (no handler). Transaction mock "PRO" row type text ("Profit distribution") is invented; ask the user for real wording.
