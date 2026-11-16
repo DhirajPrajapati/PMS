@@ -1,10 +1,11 @@
 import { Box, ButtonBase, useMediaQuery } from '@mui/material'
 import { Layers } from 'lucide-react'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { nextSort, type Dir } from '../../hooks/useSort'
 import { useServerList } from '../../hooks/useServerList'
 import { useToggleSet } from '../../hooks/useToggleSet'
-import { fetchPerformanceTransactions, type LabelValue, type TransactionRow, type TransactionSortKey } from '../../api/performanceSummary'
+import { fetchPerformanceTransactions, type LabelValue, type TransactionSortKey } from '../../api/performanceSummary'
+import { transactionRows, type TransactionRow } from './adapters'
 import { rem } from '../../utils/format'
 import { fadeUp } from '../../theme/motion'
 import { colors } from '../../theme'
@@ -95,11 +96,12 @@ function Skeleton({ isMobile }: { isMobile: boolean }) {
   )
 }
 
-export default function TransactionTab({ clientCode }: { clientCode: string }) {
+export default function TransactionTab({ clientCode, strategy }: { clientCode: string; strategy: string }) {
   const isMobile = useMediaQuery(MOBILE_Q)
   const [query, setQuery] = useState<{ page: number; sort: TransactionSortKey; dir: Dir }>({ page: 1, sort: 'date', dir: 'desc' })
   const { data: res, error, busy, gen } = useServerList((q: typeof query) => fetchPerformanceTransactions(clientCode, { page: q.page, limit: LIMIT, sort: q.sort, dir: q.dir }), query)
   const data = res?.data ?? null
+  const rows = useMemo(() => (data ? transactionRows(data.transactions) : []), [data])
   const { toggle, isOpen } = useToggleSet()
 
   const sortBy = (key: TransactionSortKey) => setQuery((q) => {
@@ -109,7 +111,7 @@ export default function TransactionTab({ clientCode }: { clientCode: string }) {
 
   return (
     <TabFrame error={error}>
-      <Panel icon={<Layers size={rem(16)} color={colors.brand.accent} />} tint={colors.rose[949]} title="Transactions" subtitle={data?.subtitle ?? ''} action={<DownloadButton />}>
+      <Panel icon={<Layers size={rem(16)} color={colors.brand.accent} />} tint={colors.rose[949]} title="Transactions" subtitle={strategy} action={<DownloadButton />}>
         {!isMobile && (
           <SortHeader columns={COLUMNS} grid={GRID} sort={{ key: query.sort, dir: query.dir }} onSort={sortBy} />
         )}
@@ -118,7 +120,7 @@ export default function TransactionTab({ clientCode }: { clientCode: string }) {
             <Skeleton isMobile={isMobile} />
           ) : (
             <Box key={gen}>
-              {data.rows.map((x, i) => isMobile
+              {rows.map((x, i) => isMobile
                 ? <MobileItem key={x.id} x={x} open={isOpen(x.id)} onToggle={() => toggle(x.id)} index={i} />
                 : <DesktopRow key={x.id} x={x} open={isOpen(x.id)} onToggle={() => toggle(x.id)} index={i} />)}
             </Box>

@@ -125,7 +125,7 @@ function PortalPage() {
           index={4}
           title="Invested Strategies"
           subtitle="Grid or list view with performance by range"
-          responses={[{ endpoint: `GET /api/pms/my-strategies${query(mine.data?.page ?? 1, mine.data?.limit ?? DEFAULT_LIMIT)}`, data: mine.loading ? undefined : mine.data?.response }]}
+          responses={[{ endpoint: `GET api/v2/dashboard/portfolio/strategies/${mine.data?.page ?? 1}/${mine.data?.limit ?? DEFAULT_LIMIT}`, data: mine.loading ? undefined : mine.data?.response }]}
         >
           {!mine.loading && mine.data ? (
             <MyStrategiesSection total={mine.data.total} asOnDate={mine.data.response.data.asOnDate} strategies={mine.data.items} />

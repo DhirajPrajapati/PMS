@@ -12,7 +12,8 @@ const HighchartsReact =
 interface Props {
   categories: string[]
   portfolio: number[]
-  benchmark: number[]
+  /** Omit to draw the portfolio series only */
+  benchmark?: number[]
   height: number
   /** [top, right, bottom, left] plot margins in CSS px */
   margin: [number, number, number, number]
@@ -49,7 +50,7 @@ export default function ReturnsBarChart({ categories, portfolio, benchmark, heig
       plotOptions: { column: { groupPadding: 0.33, pointPadding: 0, borderWidth: 0, states: { hover: { brightness: 0.12 }, inactive: { opacity: 0.55 } } } },
       series: [
         { type: 'column', name: 'Portfolio', color: P.barPortfolio, data: portfolio },
-        { type: 'column', name: 'Benchmark', color: P.barBenchmark, data: benchmark },
+        ...(benchmark ? [{ type: 'column' as const, name: 'Benchmark', color: P.barBenchmark, data: benchmark }] : []),
       ],
     }
   }, [categories, portfolio, benchmark, height, margin, fontSize, legendSize, labelWidth])

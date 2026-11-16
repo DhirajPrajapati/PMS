@@ -1,7 +1,8 @@
 import { Box, ButtonBase, useMediaQuery } from '@mui/material'
 import { Activity, PieChart, RotateCcw, Table2, Target, TriangleAlert } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { fetchPerformanceAllocation, fetchPerformanceHeader, fetchPerformanceSummary, fetchPerformanceXirr, type AllocationRow, type PerformanceHeaderResponse, type PerformanceSummaryResponse } from '../../api/performanceSummary'
+import { fetchPerformanceAllocation, fetchPerformanceHeader, fetchPerformanceSummary, fetchPerformanceXirr, type PerformanceHeaderResponse } from '../../api/performanceSummary'
+import { allocationView, summaryView, xirrView, type AllocationRow } from './adapters'
 import { useApiResource } from '../../hooks/useApiResource'
 import { rem } from '../../utils/format'
 import { colors } from '../../theme'
@@ -58,7 +59,7 @@ function Header({ h, tab, setTab }: { h: PerformanceHeaderResponse['data'] | nul
   )
 }
 
-function PerformanceRows({ d }: { d: PerformanceSummaryResponse['data']['performance'] }) {
+function PerformanceRows({ d }: { d: ReturnType<typeof summaryView>['performance'] }) {
   const rows: [string, string, boolean?][] = [
     ['Inception Date', d.inceptionDate],
     ['Net Capital (In +) / (Out -)', d.netCapital],
@@ -83,7 +84,7 @@ function PerformanceRows({ d }: { d: PerformanceSummaryResponse['data']['perform
 
 const palette = (k: AllocationRow['key']) => P[k]
 
-function Allocation({ d }: { d: PerformanceSummaryResponse['data']['allocation'] }) {
+function Allocation({ d }: { d: ReturnType<typeof summaryView>['allocation'] }) {
   const isMobile = useMediaQuery(MOBILE_Q)
   return (
     <Box sx={{ px: r(32, 31), pt: r(27, 25), pb: r(19.5, 18) }}>
@@ -116,7 +117,7 @@ function Allocation({ d }: { d: PerformanceSummaryResponse['data']['allocation']
 function SummaryTab({ clientCode }: { clientCode: string }) {
   const isMobile = useMediaQuery(MOBILE_Q)
   const { data, error } = useApiResource(() => fetchPerformanceSummary(clientCode))
-  const d = data?.data ?? null
+  const d = useMemo(() => (data ? summaryView(data.data) : null), [data])
   return (
     <TabFrame error={error}>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: rem(10), minHeight: r(50, 57), boxSizing: 'border-box', px: rem(13), py: rem(9), borderRadius: rem(14), background: P.disclaimerBg, border: `${rem(1)} solid ${P.disclaimerBorder}`, ...reset, fontSize: r(12.2, 10.6), color: P.disclaimerText }}>
@@ -171,7 +172,7 @@ const cell = { ...reset, display: 'flex', alignItems: 'center' } as const
 function XirrTab({ clientCode }: { clientCode: string }) {
   const isMobile = useMediaQuery(MOBILE_Q)
   const { data, error } = useApiResource(() => fetchPerformanceXirr(clientCode))
-  const d = data?.data ?? null
+  const d = useMemo(() => (data ? xirrView(data.data) : null), [data])
   const rows = useMemo(() => d?.rows ?? [], [d])
   const categories = useMemo(() => rows.map((x) => x.period), [rows])
   const portfolio = useMemo(() => rows.map((x) => x.portfolio), [rows])
@@ -230,8 +231,8 @@ const sectorColors = P.sectors
 
 function AllocationTab({ clientCode }: { clientCode: string }) {
   const { data, error } = useApiResource(() => fetchPerformanceAllocation(clientCode))
-  const d = data?.data ?? null
-  const sectors = d?.sectors ?? []
+  const d = useMemo(() => (data ? allocationView(data.data) : null), [data])
+  const sectors = useMemo(() => d?.sectors ?? [], [d])
   const headCell = { ...reset, display: 'flex', alignItems: 'center', fontSize: r(11.5, 10), fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', color: colors.text.mutedWarm } as const
   const cols = '44.7% 29.8% 11.3% 1fr'
   return (
@@ -319,7 +320,7 @@ export default function PerformancePage({ clientCode }: { clientCode: string }) 
     <PageShell header={<Header h={h} tab={tab} setTab={setTab} />}>
       {/* Only the body scrolls; the header stays put. */}
       {/* Each tab owns its API call, so switching tabs shows that tab's skeleton until it responds. */}
-          {tab === 'Summary' ? <SummaryTab clientCode={clientCode} /> : tab === 'XIRR' ? <XirrTab clientCode={clientCode} /> : tab === 'Allocation' ? <AllocationTab clientCode={clientCode} /> : tab === 'Holding' ? <HoldingTab clientCode={clientCode} /> : tab === 'Transaction' ? <TransactionTab clientCode={clientCode} /> : tab === 'Performance' ? <PerformanceTab clientCode={clientCode} variant={h ? (h.type.toUpperCase() === 'AIF' ? 'aif' : 'pms') : null} /> : <ComingSoon tab={tab} />}
+          {tab === 'Summary' ? <SummaryTab clientCode={clientCode} /> : tab === 'XIRR' ? <XirrTab clientCode={clientCode} /> : tab === 'Allocation' ? <AllocationTab clientCode={clientCode} /> : tab === 'Holding' ? <HoldingTab clientCode={clientCode} /> : tab === 'Transaction' ? <TransactionTab clientCode={clientCode} strategy={h?.strategy ?? ''} /> : tab === 'Performance' ? <PerformanceTab clientCode={clientCode} strategy={h?.strategy ?? ''} variant={h ? (h.type.toUpperCase() === 'AIF' ? 'aif' : 'pms') : null} /> : <ComingSoon tab={tab} />}
     </PageShell>
   )
 }

@@ -1,8 +1,9 @@
 import { Box, useMediaQuery } from '@mui/material'
 import { Activity, ArrowUpRight, Target, TrendingUp } from 'lucide-react'
 import { useMemo, useState, type ReactNode } from 'react'
-import { fetchPerformanceTab, type LabelValue, type OverviewView, type PerformanceTabResponse, type PerformanceVariant, type StripView, type Tone } from '../../api/performanceSummary'
-import { useApiResource } from '../../hooks/useApiResource'
+import { fetchPerformanceRor, type LabelValue, type RorType, type Tone } from '../../api/performanceSummary'
+import { activeSummarySubtitle, capitalFlowView, performanceKpis, rorView, type CapitalFlowView, type OverviewView, type PerformanceVariant, type StripView } from './adapters'
+import { useServerList } from '../../hooks/useServerList'
 import { rem } from '../../utils/format'
 import { colors } from '../../theme'
 import { perfPalette as P } from '../../theme/pms'
@@ -15,7 +16,8 @@ import { Bone } from '../common/Skeleton'
 import TrajectoryChart from '../common/TrajectoryChart'
 import { KpiRow, MOBILE_Q, r, reset, TabFrame } from './shared'
 
-type Data = PerformanceTabResponse['data']
+type View = OverviewView | StripView
+const ROR_OPTIONS = ['XIRR', 'TWRR'] as const
 const toneColor = (t?: Tone) => (t ? P.tone[t][0] : colors.text.strong)
 const card = { boxSizing: 'border-box', borderRadius: rem(20), bgcolor: colors.base.white, border: `${rem(1)} solid ${colors.border.default}`, overflow: 'hidden' } as const
 const muted = { ...reset, fontSize: r(12.3, 11), color: colors.text.mutedWarm } as const
@@ -83,7 +85,7 @@ const CHART_BARS_M = { height: 289, margin: [29, 11, 53, 33] as [number, number,
 /** Label/value strip + periodic returns chart. */
 function Strip({ v, isMobile }: { v: StripView; isMobile: boolean }) {
   const c = isMobile ? CHART_BARS_M : CHART_BARS_D
-  const { categories, portfolio, benchmark } = v.chart
+  const { categories, portfolio } = v.chart
   return (
     <>
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(3, 1fr)', sm: `repeat(${v.strip.length}, 1fr)` }, borderBottom: `${rem(1)} solid ${colors.border.default}` }}>
@@ -103,7 +105,7 @@ function Strip({ v, isMobile }: { v: StripView; isMobile: boolean }) {
           </Box>
         </Box>
         <Box sx={{ mt: rem(4), mx: rem(-18) }}>
-          <ReturnsBarChart categories={categories} portfolio={portfolio} benchmark={benchmark} height={c.height} margin={c.margin} fontSize={c.fontSize} legendSize={c.legendSize} labelWidth={c.labelWidth} />
+          <ReturnsBarChart categories={categories} portfolio={portfolio} height={c.height} margin={c.margin} fontSize={c.fontSize} legendSize={c.legendSize} labelWidth={c.labelWidth} />
         </Box>
       </Box>
     </>
@@ -112,9 +114,9 @@ function Strip({ v, isMobile }: { v: StripView; isMobile: boolean }) {
 
 const fade = { animation: 'perf-fade .35s ease both', '@keyframes perf-fade': { from: { opacity: 0, transform: 'translateY(4px)' }, to: { opacity: 1, transform: 'none' } }, '@media (prefers-reduced-motion: reduce)': { animation: 'none' } } as const
 
-function ActiveSummary({ d, view, onChange, isMobile }: { d: Data['activeSummary']; view: Data['activeSummary']['views'][number]; onChange: (k: string) => void; isMobile: boolean }) {
+function ActiveSummary({ subtitle, view, ror, onChange, isMobile }: { subtitle: string; view: View; ror: RorType; onChange: (r: RorType) => void; isMobile: boolean }) {
   return (
-    <Panel icon={<Target size={rem(15)} color={colors.brand.accent} />} tint={colors.rose[949]} title="Active Summary" subtitle={d.subtitle} headerHeight={72.5} headerHeightMobile={67} action={<SegmentedToggle options={d.views.map((x) => x.key)} value={view.key} onChange={onChange} ariaLabel="Return basis" />}>
+    <Panel icon={<Target size={rem(15)} color={colors.brand.accent} />} tint={colors.rose[949]} title="Active Summary" subtitle={subtitle} headerHeight={72.5} headerHeightMobile={67} action={<SegmentedToggle options={ROR_OPTIONS} value={ror.toUpperCase() as (typeof ROR_OPTIONS)[number]} onChange={(k) => onChange(k.toLowerCase() as RorType)} ariaLabel="Return basis" />}>
       <Box key={view.key} sx={fade}>
         {view.kind === 'overview' ? <Overview v={view} /> : <Strip v={view} isMobile={isMobile} />}
       </Box>
@@ -122,7 +124,7 @@ function ActiveSummary({ d, view, onChange, isMobile }: { d: Data['activeSummary
   )
 }
 
-function CapitalFlow({ d }: { d: Data['capitalFlow'] }) {
+function CapitalFlow({ d }: { d: CapitalFlowView }) {
   return (
     <Box component="section" sx={{ ...card, px: r(21, 19), pt: rem(18), pb: rem(20) }}>
       <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: rem(12) }}>
@@ -200,27 +202,31 @@ function Skeleton() {
   )
 }
 
-function Content({ clientCode, variant }: { clientCode: string; variant: PerformanceVariant }) {
+function Content({ clientCode, variant, strategy }: { clientCode: string; variant: PerformanceVariant; strategy: string }) {
   const isMobile = useMediaQuery(MOBILE_Q)
-  const { data, error } = useApiResource(() => fetchPerformanceTab(clientCode, variant))
-  const [viewKey, setViewKey] = useState<string | null>(null)
-  const d = data?.data ?? null
-  const view = d ? (d.activeSummary.views.find((x) => x.key === viewKey) ?? d.activeSummary.views[0]) : null
+  const [ror, setRor] = useState<RorType>('xirr')
+  // One call per return basis; the previous answer stays on screen (dimmed) until the next one lands.
+  const { data: res, error, busy } = useServerList((q: { ror: RorType }) => fetchPerformanceRor(clientCode, q.ror).then((r) => ({ ror: q.ror, r })), { ror })
+  const model = useMemo(() => {
+    if (!res) return null
+    const d = res.r.data
+    return { cards: performanceKpis(d, variant), view: rorView(res.ror, d, variant), flow: capitalFlowView(d, variant) }
+  }, [res, variant])
   return (
     <TabFrame error={error}>
-      <KpiRow cards={d?.cards ?? null} />
-      <Box sx={{ mt: r(17.5, 16), display: 'flex', flexDirection: 'column', gap: rem(17.5) }}>
-        {d && view ? (
+      <KpiRow cards={model?.cards ?? null} />
+      <Box sx={{ mt: r(17.5, 16), display: 'flex', flexDirection: 'column', gap: rem(17.5), opacity: busy && model ? 0.55 : 1, transition: 'opacity .2s', pointerEvents: busy && model ? 'none' : 'auto' }} aria-busy={busy}>
+        {model ? (
           <>
-            <ActiveSummary d={d.activeSummary} view={view} onChange={setViewKey} isMobile={isMobile} />
-            <CapitalFlow d={d.capitalFlow} />
+            <ActiveSummary subtitle={activeSummarySubtitle(strategy)} view={model.view} ror={ror} onChange={setRor} isMobile={isMobile} />
+            <CapitalFlow d={model.flow} />
             {/* Trajectory + summary panels belong to the XIRR view only */}
-            {view.kind === 'overview' && (
-              <Box key={view.key} sx={{ ...fade, display: 'flex', flexDirection: 'column', gap: rem(17.5) }}>
-                <Trajectory d={view.trajectory} isMobile={isMobile} />
+            {model.view.kind === 'overview' && (
+              <Box key={model.view.key} sx={{ ...fade, display: 'flex', flexDirection: 'column', gap: rem(17.5) }}>
+                <Trajectory d={model.view.trajectory} isMobile={isMobile} />
                 <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: { xs: rem(17.5), sm: rem(19) }, alignItems: 'stretch' }}>
-                  <Panel icon={<Activity size={rem(16)} color={colors.gold.base} />} tint={colors.cream[920]} title={view.summary.title} subtitle={view.summary.subtitle}><Rows rows={view.summary.rows} /></Panel>
-                  <Panel icon={<TrendingUp size={rem(16)} color={P.tone.green[0]} />} tint={P.tone.green[2]} bandTint={P.tone.green[2]} title={view.pnl.title} subtitle={view.pnl.subtitle}><Rows rows={view.pnl.rows} /></Panel>
+                  <Panel icon={<Activity size={rem(16)} color={colors.gold.base} />} tint={colors.cream[920]} title={model.view.summary.title} subtitle={model.view.summary.subtitle}><Rows rows={model.view.summary.rows} /></Panel>
+                  <Panel icon={<TrendingUp size={rem(16)} color={P.tone.green[0]} />} tint={P.tone.green[2]} bandTint={P.tone.green[2]} title={model.view.pnl.title} subtitle={model.view.pnl.subtitle}><Rows rows={model.view.pnl.rows} /></Panel>
                 </Box>
               </Box>
             )}
@@ -238,8 +244,8 @@ function Content({ clientCode, variant }: { clientCode: string; variant: Perform
  * everything on screen is rendered from the label/value arrays it returns.
  * `variant` is null until the header (which says PMS or AIF) has loaded.
  */
-export default function PerformanceTab({ clientCode, variant }: { clientCode: string; variant: PerformanceVariant | null }) {
-  if (variant) return <Content clientCode={clientCode} variant={variant} />
+export default function PerformanceTab({ clientCode, variant, strategy }: { clientCode: string; variant: PerformanceVariant | null; strategy: string }) {
+  if (variant) return <Content clientCode={clientCode} variant={variant} strategy={strategy} />
   return (
     <TabFrame error={null}>
       <KpiRow cards={null} />

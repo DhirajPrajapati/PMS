@@ -1,28 +1,37 @@
 import { DEFAULT_LIMIT, paginate, wait, type PageMeta, type PageParams } from './pagination'
 
-export type AllocationKey = 'equity' | 'cash' | 'debt' | 'derivatives' | 'other'
+// Mock APIs for the Strategy Performance Summary page. Every endpoint below returns the
+// backend contract as-is (raw numbers, DD/MM/YYYY dates, { status, message, data } envelope).
+// Display formatting (₹ grouping, labels, colours) happens in components/performance/adapters.ts.
 
-export interface AllocationRow {
-  key: AllocationKey
+/** Header-card helper used by Holding (display strings the backend formats itself) */
+export interface LabelValue {
   label: string
-  /** Display string exactly as the backend formats it */
-  amount: string
-  /** Percent of total AUM */
-  pct: number
+  value: string
+  /** Colours the value (green gain, red loss…) */
+  tone?: Tone
 }
 
-/** One KPI tile; every tab returns its own four */
+/** One KPI tile (label, display value, caption) */
 export interface KpiCard {
   label: string
   value: string
   sub: string
 }
 
+export type Tone = 'maroon' | 'green' | 'red' | 'navy' | 'slate'
+
 interface Envelope<T> {
   status: 'success' | 'error'
   message: string
   data: T
 }
+
+const ok = <T>(data: T): Envelope<T> => ({ status: 'success', message: 'Fetched Successfully', data })
+
+// ---------------------------------------------------------------------------
+// Header (not part of the pasted contract; kept as before)
+// ---------------------------------------------------------------------------
 
 /** GET /api/pms/strategies/:clientCode/performance/header (shown above every tab) */
 export type PerformanceHeaderResponse = Envelope<{
@@ -33,290 +42,229 @@ export type PerformanceHeaderResponse = Envelope<{
   provider: string
 }>
 
-/** GET /api/pms/strategies/:clientCode/performance/summary */
-export type PerformanceSummaryResponse = Envelope<{
-  disclaimer: string
-  cards: KpiCard[]
-  performance: {
-    inceptionDate: string
-    netCapital: string
-    realisedGainLoss: string
-    /** Signed, rendered green when positive */
-    unrealisedGainLoss: string
-    incomeReceived: string
-    feesExpenses: string
-    accruedIncome: string
-    portfolioValueDate: string
-    portfolioValue: string
-  }
-  allocation: { totalAum: string; rows: AllocationRow[] }
-}>
-
-/** GET /api/pms/strategies/:clientCode/performance/xirr (percent values) */
-export type PerformanceXirrResponse = Envelope<{
-  cards: KpiCard[]
-  rows: { period: string; portfolio: number; benchmark: number }[]
-}>
-
-/** GET /api/pms/strategies/:clientCode/performance/allocation */
-export type PerformanceAllocationResponse = Envelope<{
-  cards: KpiCard[]
-  sectors: { label: string; amount: string; pct: number }[]
-  securities: { name: string; sector: string; pct: string; value: string }[]
-}>
-
-const ok = <T>(data: T): Envelope<T> => ({ status: 'success', message: 'Fetched Successfully', data })
-
 export async function fetchPerformanceHeader(_clientCode: string, latencyMs = 400): Promise<PerformanceHeaderResponse> {
   await wait(latencyMs)
   return ok({ clientName: 'Amit Deshmukh', clientCode: 'DI01366A', type: 'PMS', strategy: 'PMS Contra Strategy', provider: 'ICICI Prudential' })
 }
 
+// ---------------------------------------------------------------------------
+// Summary tab
+// ---------------------------------------------------------------------------
+
+/** GET api/v2/dashboard/portfolio/{clientCode}/performance-summary */
+export type PerformanceSummaryResponse = Envelope<{
+  aum: number
+  invested: number
+  returns: number
+  performanceSummary: {
+    xirr: number
+    /** DD/MM/YYYY */
+    inceptionDate: string
+    realpnl: number
+    unRealpnl: number
+    incomeReceived: number
+    feesnExp: number
+    accuredIncome: number
+  }
+  allocationDetails: { sector: string; marketValue: number; pct: number }[]
+}>
+
 export async function fetchPerformanceSummary(_clientCode: string, latencyMs = 700): Promise<PerformanceSummaryResponse> {
   await wait(latencyMs)
   return ok({
-    disclaimer: 'The data below excludes transactions that are currently under processing.',
-    cards: [
-      { label: 'Current Value', value: '₹1,00,07,326', sub: "Today's portfolio value" },
-      { label: 'Net Capital', value: '₹88,50,000', sub: 'Total invested' },
-      { label: 'Absolute Return', value: '₹11,57,326', sub: 'Total gain on investment' },
-      { label: 'XIRR', value: '18.4%', sub: 'Annualised return' },
-    ],
-    performance: {
+    aum: 10007326.0,
+    invested: 8850000.0,
+    returns: 1157326.0,
+    performanceSummary: {
+      xirr: 18.4,
       inceptionDate: '26/08/2025',
-      netCapital: '₹88,50,000',
-      realisedGainLoss: '₹0',
-      unrealisedGainLoss: '+₹11,04,540',
-      incomeReceived: '₹52,786',
-      feesExpenses: '₹1,24,500',
-      accruedIncome: '₹28,000',
-      portfolioValueDate: '20/08/2026',
-      portfolioValue: '₹1,00,07,326',
+      realpnl: 0,
+      unRealpnl: 1104540.0,
+      incomeReceived: 52786,
+      feesnExp: 124500,
+      accuredIncome: 28000,
     },
-    allocation: {
-      totalAum: '₹1.0 Cr',
-      rows: [
-        { key: 'equity', label: 'Equity', amount: '₹74,89,123', pct: 74.81 },
-        { key: 'cash', label: 'Cash & Equiv.', amount: '₹15,42,000', pct: 15.42 },
-        { key: 'debt', label: 'Debt', amount: '₹ 6,23,452', pct: 6.23 },
-        { key: 'derivatives', label: 'Derivatives', amount: '₹ 2,89,341', pct: 2.89 },
-        { key: 'other', label: 'Other', amount: '₹ 65,410', pct: 0.65 },
-      ],
-    },
+    allocationDetails: [
+      { sector: 'Equity', marketValue: 7489123.0, pct: 74.81 },
+      { sector: 'Cash & Equiv.', marketValue: 1542000.0, pct: 15.42 },
+      { sector: 'Debt', marketValue: 623452.0, pct: 6.23 },
+      { sector: 'Derivatives', marketValue: 289341.0, pct: 2.89 },
+      { sector: 'Other', marketValue: 65410.0, pct: 0.65 },
+    ],
   })
 }
+
+// ---------------------------------------------------------------------------
+// XIRR tab
+// ---------------------------------------------------------------------------
+
+/** GET api/v2/dashboard/portfolio/{clientCode}/xirrtrends (percent values) */
+export type PerformanceXirrResponse = Envelope<{
+  invested: number
+  aum: number
+  xirr: number
+  returns: number
+  benchmark1m: number
+  portfolio1m: number
+  benchmark3m: number
+  portfolio3m: number
+  benchmark6m: number
+  portfolio6m: number
+  benchmark1y: number
+  portfolio1y: number
+  benchmarkAll: number
+  portfolioAll: number
+}>
 
 export async function fetchPerformanceXirr(_clientCode: string, latencyMs = 700): Promise<PerformanceXirrResponse> {
   await wait(latencyMs)
   return ok({
-    cards: [
-      { label: 'Current Value', value: '₹1,00,07,326', sub: "Today's portfolio value" },
-      { label: 'Net Capital', value: '₹88,50,000', sub: 'Total invested' },
-      { label: 'Absolute Return', value: '₹11,57,326', sub: 'Total gain on investment' },
-      { label: 'XIRR', value: '16.2%', sub: 'Annualised return' },
-    ],
-    rows: [
-      { period: '1 Month', portfolio: 1.2, benchmark: 0.95 },
-      { period: '3 Month', portfolio: 3.85, benchmark: 3.1 },
-      { period: '6 Month', portfolio: 7.42, benchmark: 6.3 },
-      { period: '1 Year', portfolio: 14.6, benchmark: 12.8 },
-      { period: 'Since Inception', portfolio: 21.4, benchmark: 18.5 },
-    ],
+    invested: 8850000.0,
+    aum: 10007326.0,
+    xirr: 16.2,
+    returns: 1157326.0,
+    benchmark1m: 0.95,
+    portfolio1m: 1.2,
+    benchmark3m: 3.1,
+    portfolio3m: 3.85,
+    benchmark6m: 6.3,
+    portfolio6m: 7.42,
+    benchmark1y: 12.8,
+    portfolio1y: 14.6,
+    benchmarkAll: 18.5,
+    portfolioAll: 21.4,
   })
 }
+
+// ---------------------------------------------------------------------------
+// Allocation tab
+// ---------------------------------------------------------------------------
+
+/** GET api/v2/dashboard/portfolio/{clientCode}/allocation */
+export type PerformanceAllocationResponse = Envelope<{
+  invested: number
+  aum: number
+  xirr: number
+  returns: number
+  sector: { sectorName: string; marketValue: number; pct: number }[]
+  security: { sectorName: string; marketValue: number; pct: number; symbolName: string }[]
+}>
 
 export async function fetchPerformanceAllocation(_clientCode: string, latencyMs = 700): Promise<PerformanceAllocationResponse> {
   await wait(latencyMs)
   return ok({
-    cards: [
-      { label: 'Current Value', value: '₹1,00,07,326', sub: 'Total market value of your portfolio today' },
-      { label: 'Capital Invested', value: '₹88,50,000', sub: 'Net Capital Investment' },
-      { label: 'Absolute Return', value: '₹11,57,326', sub: '+13.08% absolute' },
-      { label: 'XIRR', value: '9.11%', sub: 'Annualized Return' },
+    invested: 8850000.0,
+    aum: 10007326.0,
+    xirr: 9.11,
+    returns: 1157326.0,
+    sector: [
+      { sectorName: 'Financial Services', marketValue: 2842000.0, pct: 28.4 },
+      { sectorName: 'Information Tech.', marketValue: 1872000.0, pct: 18.7 },
+      { sectorName: 'Automobile', marketValue: 1231000.0, pct: 12.3 },
+      { sectorName: 'Healthcare', marketValue: 961000.0, pct: 9.6 },
+      { sectorName: 'Energy', marketValue: 821000.0, pct: 8.2 },
+      { sectorName: 'Consumer Goods', marketValue: 780000.0, pct: 7.8 },
+      { sectorName: 'Services', marketValue: 640000.0, pct: 6.4 },
+      { sectorName: 'Others', marketValue: 861000.0, pct: 8.6 },
     ],
-    sectors: [
-      { label: 'Financial Services', amount: '₹28,42,000', pct: 28.4 },
-      { label: 'Information Tech.', amount: '₹18,72,000', pct: 18.7 },
-      { label: 'Automobile', amount: '₹12,31,000', pct: 12.3 },
-      { label: 'Healthcare', amount: '₹9,61,000', pct: 9.6 },
-      { label: 'Energy', amount: '₹8,21,000', pct: 8.2 },
-      { label: 'Consumer Goods', amount: '₹7,80,000', pct: 7.8 },
-      { label: 'Services', amount: '₹6,40,000', pct: 6.4 },
-      { label: 'Others', amount: '₹8,61,000', pct: 8.6 },
-    ],
-    securities: [
-      { name: 'Cash', sector: 'MISCELLANEOUS', pct: '12.38%', value: '₹3,88,249' },
-      { name: 'Bharti Airtel Ltd', sector: 'TELECOM - SERVICES', pct: '8.02%', value: '₹2,51,344' },
-      { name: 'Hindalco Industries Ltd', sector: 'METALS', pct: '7.65%', value: '₹2,39,753' },
-      { name: 'Tata Steel Ltd', sector: 'METALS', pct: '7.41%', value: '₹2,32,178' },
-      { name: 'Great Eastern Shipping Co. Ltd', sector: 'TRANS', pct: '6.83%', value: '₹2,14,153' },
-      { name: 'Larsen & Toubro Ltd', sector: 'CONSTRUCTION', pct: '6.50%', value: '₹2,03,870' },
-      { name: 'State Bank of India', sector: 'FINANCIAL SERVICES', pct: '6.03%', value: '₹1,89,036' },
-      { name: 'Muthoot Finance Limited', sector: 'FINANCIAL SERVICES', pct: '5.89%', value: '₹1,84,740' },
-      { name: 'Bharat Forge Ltd', sector: 'INDUSTRIAL MFG', pct: '5.27%', value: '₹1,65,135' },
+    security: [
+      { symbolName: 'Cash', sectorName: 'Miscellaneous', marketValue: 388249.0, pct: 12.38 },
+      { symbolName: 'Bharti Airtel Ltd', sectorName: 'Telecom - Services', marketValue: 251344.0, pct: 8.02 },
+      { symbolName: 'Hindalco Industries Ltd', sectorName: 'Metals', marketValue: 239753.0, pct: 7.65 },
+      { symbolName: 'Tata Steel Ltd', sectorName: 'Metals', marketValue: 232178.0, pct: 7.41 },
+      { symbolName: 'Great Eastern Shipping Co. Ltd', sectorName: 'Trans', marketValue: 214153.0, pct: 6.83 },
+      { symbolName: 'Larsen & Toubro Ltd', sectorName: 'Construction', marketValue: 203870.0, pct: 6.5 },
+      { symbolName: 'State Bank of India', sectorName: 'Financial Services', marketValue: 189036.0, pct: 6.03 },
+      { symbolName: 'Muthoot Finance Limited', sectorName: 'Financial Services', marketValue: 184740.0, pct: 5.89 },
+      { symbolName: 'Bharat Forge Ltd', sectorName: 'Industrial Mfg', marketValue: 165135.0, pct: 5.27 },
     ],
   })
 }
 
 // ---------------------------------------------------------------------------
-// Performance tab. One response shape for every product variant: the UI renders
-// whatever label/value arrays come back, so AIF only changes the data.
+// Performance tab: one endpoint, `ror` picks the return basis
 // ---------------------------------------------------------------------------
 
-export type Tone = 'maroon' | 'green' | 'red' | 'navy' | 'slate'
-export type PerformanceVariant = 'pms' | 'aif'
+export type RorType = 'xirr' | 'twrr'
 
-export interface LabelValue {
-  label: string
-  value: string
-  /** Colours the value (green gain, red loss…) */
-  tone?: Tone
-}
-
-/** XIRR view of the Active Summary card */
-export interface OverviewView {
-  key: string
-  kind: 'overview'
-  hero: { label: string; value: string; badge: string; note: string }
-  metrics: { label: string; value: string; sub: string; tone?: Tone; icon: 'capital' | 'return' }[]
-  compare: { title: string; rows: { label: string; pct: number; display: string }[]; badge: string }
-  /** Sections that belong to the XIRR view only (the TWRR view has none) */
-  trajectory: { title: string; subtitle: string; categories: string[]; labelAt: number[]; ticks: number[]; series: { name: string; data: number[] }[] }
-  summary: { title: string; subtitle: string; rows: LabelValue[] }
-  pnl: { title: string; subtitle: string; rows: LabelValue[] }
-}
-
-/** TWRR view: a strip of label/value cells + a periodic returns chart */
-export interface StripView {
-  key: string
-  kind: 'strip'
-  strip: LabelValue[]
-  chart: { title: string; subtitle: string; categories: string[]; portfolio: number[]; benchmark: number[] }
-}
-
-/** GET /api/pms/strategies/:clientCode/performance (also /aif/… with the AIF labels) */
-export type PerformanceTabResponse = Envelope<{
-  variant: PerformanceVariant
-  cards: KpiCard[]
-  activeSummary: { subtitle: string; views: (OverviewView | StripView)[] }
-  capitalFlow: { title: string; subtitle: string; asOn: string; items: { label: string; value: string; sub: string; tone: Tone; fill: number; marker: string }[] }
+/** GET api/v2/dashboard/portfolio/{clientCode}/ror-trends/{ror} */
+export type PerformanceRorResponse = Envelope<{
+  invested: number
+  aum: number
+  xirr: number
+  returns: number
+  returnPct: number
+  portfolio: number
+  benchmark: number
+  beginValue: number
+  capitalIn: number
+  capitalOut: number
+  inceptionDate: string
+  realPnl: number
+  unrealPnl: number
+  priorGain: number
+  incomeReceived: number
+  feeAndExp: number
+  accuredIncome: number
+  /** DD/MM/YYYY + return in percent */
+  rorTrends: { date: string; ror: number }[]
 }>
 
 const XIRR_SERIES = [7.24, 7.15, 7.05, 7.2, 7.45, 7.4, 7.35, 7.5, 7.75, 7.95, 8.15, 8.35, 8.5, 8.45, 8.3, 8.55, 8.9, 9.2, 9.5, 9.4, 9.1, 9.45, 9.76, 9.8, 9.7, 9.6]
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-const TRAJ_CATEGORIES = XIRR_SERIES.map((_, i) => `${MONTHS[i % 12]}'${24 + Math.floor(i / 12)}`)
+const TWRR_SERIES = [-4.5, 2.5, 1.55, -0.25, 5.2, 0.1, -0.2, 0.05, 0.05, -3.6, 0.03, 0.03]
+const dd = (n: number) => String(n).padStart(2, '0')
+/** First of each month starting Jan 2024 / Oct 2025 */
+const monthly = (values: number[], startYear: number, startMonth: number) =>
+  values.map((ror, i) => {
+    const m = startMonth + i
+    return { date: `01/${dd((m % 12) + 1)}/${startYear + Math.floor(m / 12)}`, ror }
+  })
 
-const PMS_TAB: PerformanceTabResponse['data'] = {
-  variant: 'pms',
-  cards: [
-    { label: 'Current Value', value: '₹1,00,07,326', sub: "Today's portfolio value" },
-    { label: 'Capital Invested', value: '₹88,50,000', sub: 'Net Capital Investment' },
-    { label: 'Absolute Gain / Loss', value: '₹11,57,326', sub: '+13.08% absolute' },
-    { label: 'XIRR', value: '9.11%', sub: 'Annualized Return' },
-  ],
-  activeSummary: {
-    subtitle: 'PMS Contra Strategy · Feb 24, 2026',
-    views: [
-      {
-        key: 'XIRR', kind: 'overview',
-        hero: { label: 'Current Portfolio Value', value: '₹1,00,07,326', badge: '+₹11,57,326 · +13.08%', note: 'vs ₹88,50,000 invested' },
-        metrics: [
-          { label: 'Net Capital', value: '₹88,50,000', sub: 'Invested Capital', icon: 'capital' },
-          { label: 'Abs. Return', value: '₹11,57,326', sub: 'Since inception', tone: 'green', icon: 'return' },
-        ],
-        compare: { title: 'Portfolio vs Benchmark', rows: [{ label: 'Portfolio', pct: 9.11, display: '9.11%' }, { label: 'Benchmark', pct: 8.45, display: '8.45%' }], badge: '+0.66% Alpha' },
-      trajectory: {
-        title: 'XIRR Performance Trajectory', subtitle: 'Jan 2024 – Feb 2026 · Annualised return (%)',
-        categories: TRAJ_CATEGORIES, labelAt: [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 25], ticks: [6, 8, 11],
-        series: [
-          { name: 'XIRR', data: XIRR_SERIES },
-          { name: 'Benchmark', data: XIRR_SERIES.map((v) => +(v - 0.55).toFixed(2)) },
-        ],
-      },
-      summary: {
-        title: 'Performance Summary', subtitle: 'Key performance indicators',
-        rows: [
-          { label: 'Begin Value', value: '₹88,50,000' },
-          { label: 'Capital In', value: '₹26,00,000' },
-          { label: 'Capital Out', value: '₹14,42,674' },
-          { label: 'Profit / Loss', value: '+₹11,57,326', tone: 'green' },
-          { label: 'Current Value', value: '₹1,00,07,326' },
-          { label: 'Change %', value: '+13.08%', tone: 'green' },
-        ],
-      },
-      pnl: {
-        title: 'Profit & Loss', subtitle: 'Financial gains and losses',
-        rows: [
-          { label: 'Realised Gain / Loss', value: '₹0', tone: 'slate' },
-          { label: 'Unrealised Gain / Loss', value: '+₹11,04,540', tone: 'green' },
-          { label: 'Prior Gain', value: '₹52,786', tone: 'green' },
-          { label: 'Income Received', value: '₹52,786', tone: 'green' },
-          { label: 'Fees & Expenses', value: '₹1,24,500', tone: 'red' },
-          { label: 'Accrued Income', value: '₹28,000', tone: 'green' },
-        ],
-      },
-      },
-      {
-        key: 'TWRR', kind: 'strip',
-        strip: [
-          { label: 'Begin Value', value: '₹32.44 L' },
-          { label: 'Net Capital', value: '₹50 L' },
-          { label: 'Gain / Loss', value: '₹−1.09 L', tone: 'red' },
-          { label: 'Current Value', value: '₹31.35 L' },
-          { label: 'Portfolio', value: '0%' },
-          { label: 'S&P BSE200 %', value: '0.00%' },
-        ],
-        chart: {
-          title: 'Portfolio Performance', subtitle: 'TWRR vs BSE 500 TRI benchmark',
-          categories: ['2025-10-31', '2025-11-30', '2025-12-31', '2026-01-31', '2026-02-28', '2026-03-31', '2026-04-30', '2026-05-31', '2026-06-30', '2026-07-31', '2026-08-31', '2026-09-08'],
-          portfolio: [-4.5, 2.5, 1.55, -0.25, 5.2, 0.1, -0.2, 0.05, 0.05, -3.6, 0.03, 0.03],
-          benchmark: [0.4, 0.6, -0.2, -0.5, 0.3, -0.1, 0.1, 0.02, 0.02, -0.25, 0.02, 0.02],
-        },
-      },
-    ],
-  },
-  capitalFlow: {
-    title: 'Capital Flow', subtitle: 'Inception → current · portfolio movement', asOn: 'As on 09 Sep 2026',
-    items: [
-      { label: 'Begin Value', value: '₹88,50,000', sub: 'At inception', tone: 'maroon', fill: 87, marker: '' },
-      { label: 'Capital In', value: '+₹26,00,000', sub: 'Inflows', tone: 'green', fill: 26, marker: '+ ' },
-      { label: 'Capital Out', value: '−₹14,42,674', sub: 'Outflows', tone: 'red', fill: 14, marker: '– ' },
-      { label: 'Current Value', value: '₹1,00,07,326', sub: 'As on Feb 24, 2026', tone: 'navy', fill: 100, marker: '' },
-    ],
-  },
+const ROR_XIRR: PerformanceRorResponse['data'] = {
+  invested: 8850000.0,
+  aum: 10007326.0,
+  xirr: 9.11,
+  returns: 1157326.0,
+  returnPct: 13.08,
+  portfolio: 9.11,
+  benchmark: 8.45,
+  beginValue: 8850000.0,
+  capitalIn: 2600000.0,
+  capitalOut: 1442674.0,
+  inceptionDate: '26/08/2025',
+  realPnl: 0.0,
+  unrealPnl: 1104540.0,
+  priorGain: 52786.0,
+  incomeReceived: 52786.0,
+  feeAndExp: 124500.0,
+  accuredIncome: 28000.0,
+  rorTrends: monthly(XIRR_SERIES, 2024, 0),
 }
 
-/** AIF flavour: same shape, fund-style labels. */
-const AIF_TAB: PerformanceTabResponse['data'] = {
-  ...PMS_TAB,
-  variant: 'aif',
-  cards: [
-    { label: 'Current NAV Value', value: '₹1,00,07,326', sub: 'Value of your units today' },
-    { label: 'Capital Contributed', value: '₹88,50,000', sub: 'Drawn down so far' },
-    { label: 'Absolute Gain / Loss', value: '₹11,57,326', sub: '+13.08% absolute' },
-    { label: 'IRR', value: '9.11%', sub: 'Annualized Return' },
-  ],
-  activeSummary: {
-    subtitle: 'AIF Growth Fund · Feb 24, 2026',
-    views: [
-      { ...(PMS_TAB.activeSummary.views[0] as OverviewView), summary: { title: 'Fund Summary', subtitle: 'Key fund indicators', rows: [{ label: 'Commitment', value: '₹1,00,00,000' }, { label: 'Contributions', value: '₹88,50,000' }, { label: 'Distributions', value: '₹14,42,674' }, { label: 'Profit / Loss', value: '+₹11,57,326', tone: 'green' }, { label: 'Current NAV', value: '₹1,00,07,326' }, { label: 'Change %', value: '+13.08%', tone: 'green' }] }, hero: { label: 'Current NAV Value', value: '₹1,00,07,326', badge: '+₹11,57,326 · +13.08%', note: 'vs ₹88,50,000 contributed' } },
-      { ...(PMS_TAB.activeSummary.views[1] as StripView), key: 'TWRR', strip: [{ label: 'Opening NAV', value: '₹32.44 L' }, { label: 'Contributions', value: '₹50 L' }, { label: 'Gain / Loss', value: '₹−1.09 L', tone: 'red' }, { label: 'Closing NAV', value: '₹31.35 L' }, { label: 'Fund', value: '0%' }, { label: 'Benchmark %', value: '0.00%' }] },
-    ],
-  },
-  capitalFlow: {
-    ...PMS_TAB.capitalFlow,
-    items: [
-      { label: 'Commitment', value: '₹1,00,00,000', sub: 'Total committed', tone: 'maroon', fill: 100, marker: '' },
-      { label: 'Contributions', value: '+₹88,50,000', sub: 'Drawn down', tone: 'green', fill: 88, marker: '+ ' },
-      { label: 'Distributions', value: '−₹14,42,674', sub: 'Returned', tone: 'red', fill: 14, marker: '– ' },
-      { label: 'Current NAV', value: '₹1,00,07,326', sub: 'As on Feb 24, 2026', tone: 'navy', fill: 100, marker: '' },
-    ],
-  },
+const ROR_TWRR: PerformanceRorResponse['data'] = {
+  invested: 5000000.0,
+  aum: 3135000.0,
+  xirr: 9.11,
+  returns: -109000.0,
+  returnPct: -3.36,
+  portfolio: 0.0,
+  benchmark: 0.0,
+  beginValue: 3244000.0,
+  capitalIn: 5000000.0,
+  capitalOut: 0.0,
+  inceptionDate: '31/10/2025',
+  realPnl: 0.0,
+  unrealPnl: -109000.0,
+  priorGain: 0.0,
+  incomeReceived: 0.0,
+  feeAndExp: 0.0,
+  accuredIncome: 0.0,
+  rorTrends: monthly(TWRR_SERIES, 2025, 9),
 }
 
-export async function fetchPerformanceTab(_clientCode: string, variant: PerformanceVariant = 'pms', latencyMs = 800): Promise<PerformanceTabResponse> {
+export async function fetchPerformanceRor(_clientCode: string, ror: RorType = 'xirr', latencyMs = 800): Promise<PerformanceRorResponse> {
   await wait(latencyMs)
-  return ok(variant === 'aif' ? AIF_TAB : PMS_TAB)
+  return ok(ror === 'twrr' ? ROR_TWRR : ROR_XIRR)
 }
 
 // ---------------------------------------------------------------------------
@@ -397,40 +345,40 @@ export async function fetchPerformanceHolding(_clientCode: string, latencyMs = 8
 
 export type TransactionSortKey = 'account' | 'date' | 'type' | 'security' | 'amount'
 
-export interface TransactionRow {
-  id: string
-  account: string
-  date: HoldingCell
-  /** Short code shown in the pill (AS+, PRO…) */
-  type: string
+export interface TransactionItem {
+  clientId: string
+  clientCode: string
+  clientName: string
+  /** DD/MM/YYYY */
+  tranDate: string
+  /** Short code: AS+ (additional subscription), PRO… */
+  tranType: string
   security: string
-  amount: HoldingCell
-  /** Expanded details, one array per table column: account, trans type, amount */
-  details: [LabelValue[], LabelValue[], LabelValue[]]
+  units: number
+  exchange: string
+  unitPrice: number
 }
 
-/** GET /api/pms/strategies/:clientCode/performance/transactions?page=1&limit=10&sort=date&dir=desc */
-export type PerformanceTransactionsResponse = Envelope<PageMeta & { subtitle: string; rows: TransactionRow[] }>
+/**
+ * GET api/v2/dashboard/portfolio/{clientCode}/transaction-history?page=1&limit=10&sort=date&dir=desc
+ * `transactions` is the pasted contract; the paging fields beside it are added by the mock (the tab has a pager).
+ */
+export type PerformanceTransactionsResponse = Envelope<PageMeta & { transactions: TransactionItem[] }>
 
-const lv = (label: string, value: string): LabelValue => ({ label, value })
-const TRANSACTIONS: TransactionRow[] = [
-  {
-    id: 't1', account: '10019723 - DI19723A - G Injila', date: cell('14/08/2026', Date.UTC(2026, 7, 14)), type: 'AS+', security: 'Cash', amount: cell('₹12.25 L', 1225000),
-    details: [
-      [lv('Date', '14/08/2026'), lv('Units', '1225000'), lv('Trading A/c', '–')],
-      [lv('Amount', '₹12.25 L'), lv('Tran Type', 'Additional subscription'), lv('DP', 'IN301348 - 20034802')],
-      [lv('Security', 'Cash'), lv('Price', '1'), lv('Exchange', 'DIR')],
-    ],
-  },
-  {
-    id: 't2', account: '10019723 - DI19723A - G Injila', date: cell('18/11/2025', Date.UTC(2025, 10, 18)), type: 'PRO', security: 'Cash', amount: cell('₹4 L', 400000),
-    details: [
-      [lv('Date', '18/11/2025'), lv('Units', '400000'), lv('Trading A/c', '–')],
-      [lv('Amount', '₹4 L'), lv('Tran Type', 'Profit distribution'), lv('DP', 'IN301348 - 20034802')],
-      [lv('Security', 'Cash'), lv('Price', '1'), lv('Exchange', 'DIR')],
-    ],
-  },
+const tx = (clientId: string, clientCode: string, clientName: string, tranDate: string, tranType: string, security: string, units: number, unitPrice: number): TransactionItem => ({
+  clientId, clientCode, clientName, tranDate, tranType, security, units, exchange: 'DR', unitPrice,
+})
+const TRANSACTIONS: TransactionItem[] = [
+  tx('10019723', 'DI19723A', 'G Injila', '14/08/2026', 'AS+', 'Cash', 1225000, 1),
+  tx('10019723', 'DI19723A', 'G Injila', '18/11/2025', 'PRO', 'Cash', 400000, 1),
+  tx('10019723', 'DI19723A', 'G Injila', '02/09/2025', 'AS+', 'Cash', 2000000, 1),
+  tx('10019723', 'DI19723A', 'G Injila', '26/08/2025', 'AS+', 'Cash', 6000000, 1),
 ]
+
+const toTime = (d: string) => {
+  const [dayN, m, y] = d.split('/').map(Number)
+  return Date.UTC(y, m - 1, dayN)
+}
 
 export async function fetchPerformanceTransactions(
   _clientCode: string,
@@ -439,12 +387,13 @@ export async function fetchPerformanceTransactions(
 ): Promise<PerformanceTransactionsResponse> {
   await wait(latencyMs)
   const { sort = 'date', dir = 'desc' } = params
-  const key = (x: TransactionRow): string | number => (sort === 'date' ? x.date.n ?? 0 : sort === 'amount' ? x.amount.n ?? 0 : x[sort])
+  const key = (x: TransactionItem): string | number =>
+    sort === 'date' ? toTime(x.tranDate) : sort === 'amount' ? x.units * x.unitPrice : sort === 'account' ? `${x.clientId} - ${x.clientCode} - ${x.clientName}` : sort === 'type' ? x.tranType : x.security
   const sorted = [...TRANSACTIONS].sort((a, b) => {
     const x = key(a)
     const y = key(b)
     return (typeof x === 'string' ? x.localeCompare(y as string) : x - (y as number)) * (dir === 'asc' ? 1 : -1)
   })
   const { rows, meta } = paginate(sorted, params, DEFAULT_LIMIT)
-  return ok({ ...meta, subtitle: 'PMS Contra Strategy', rows })
+  return ok({ ...meta, transactions: rows })
 }
