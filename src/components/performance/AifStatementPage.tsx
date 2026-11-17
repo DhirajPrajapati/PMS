@@ -23,7 +23,6 @@ import LabelValueList from '../common/LabelValueList'
 import Breadcrumb from '../common/Breadcrumb'
 import PageShell from '../common/PageShell'
 import Panel from '../common/Panel'
-import TopBar from '../common/TopBar'
 import SortHeader, { type SortColumn } from '../common/SortHeader'
 import Pill from '../common/Pill'
 import { Bone } from '../common/Skeleton'
@@ -44,7 +43,6 @@ function Header({ d }: { d: Data | null }) {
   const asOn = d && <Box component="span" sx={{ fontWeight: 700, color: colors.text.strong }}>{d.asOn}</Box>
   return (
     <Box sx={{ flexShrink: 0, bgcolor: colors.base.white }}>
-      <TopBar name="Amit Deshmukh" />
       <Box sx={{ px: r(21, 17), pt: r(23, 18), pb: r(22, 23), borderBottom: `${rem(1)} solid ${colors.border.default}` }}>
         <Breadcrumb current="View Statement" />
         <Box sx={{ mt: rem(14), display: 'flex', alignItems: 'center', gap: rem(8), height: rem(20), ...muted, fontSize: r(12.3, 11.5) }}>
@@ -198,7 +196,7 @@ export default function AifStatementPage({ folio }: { folio: string }) {
   const { data, error } = useApiResource(() => fetchAifStatement(folio))
   const d = data?.data ?? null
   return (
-    <PageShell header={<Header d={d} />}>
+    <PageShell embedded header={<Header d={d} />}>
       <Content folio={folio} d={d} error={error} />
     </PageShell>
   )

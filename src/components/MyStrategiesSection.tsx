@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom'
 import { Box, ButtonBase, useMediaQuery } from '@mui/material'
 import { ChevronLeft, ChevronRight, Menu } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -133,13 +134,14 @@ function HScroller({ children }: { children: React.ReactNode[] }) {
 }
 
 export default function MyStrategiesSection({ total, asOnDate, strategies }: Props) {
+  const navigate = useNavigate()
   const isMobile = useMediaQuery('(max-width:40rem)')
   const [view, setView] = useState<View>('grid')
   const openPerformance = (s: MyStrategy) => {
-    window.location.hash = `#/performance/${encodeURIComponent(s.id)}`
+    navigate(`/performance/${encodeURIComponent(s.id)}`)
   }
   const openStatement = (s: MyStrategy) => {
-    window.location.hash = `#/statement/${encodeURIComponent(s.aif?.folio || s.id)}`
+    navigate(`/statement/${encodeURIComponent(s.aif?.folio || s.id)}`)
   }
   const cards = strategies.map((s) => <MyStrategyCard key={s.id} strategy={s} onPerformance={openPerformance} onStatement={openStatement} />)
 

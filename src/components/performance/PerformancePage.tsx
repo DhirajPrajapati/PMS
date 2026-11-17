@@ -10,7 +10,6 @@ import { perfPalette as P } from '../../theme/pms'
 import Avatar from '../common/Avatar'
 import Breadcrumb from '../common/Breadcrumb'
 import PageShell from '../common/PageShell'
-import TopBar from '../common/TopBar'
 import DonutChart from '../common/DonutChart'
 import IconChip from '../common/IconChip'
 import Panel from '../common/Panel'
@@ -31,7 +30,6 @@ function Dot() {
 function Header({ h, tab, setTab }: { h: PerformanceHeaderResponse['data'] | null; tab: TabName; setTab: (t: TabName) => void }) {
   return (
     <Box sx={{ flexShrink: 0, bgcolor: colors.base.white }}>
-      <TopBar name={h?.clientName ?? ''} />
       <Box sx={{ px: r(21, 21), pt: r(27, 19), pb: r(15, 11), borderBottom: { xs: `${rem(1)} dashed ${colors.border.input}`, sm: `${rem(1)} solid ${colors.border.default}` } }}>
         <Breadcrumb current="Strategy Performance Summary" />
         <Box sx={{ mt: r(17, 14), display: 'flex', alignItems: 'center', gap: rem(16) }}>
@@ -317,7 +315,7 @@ export default function PerformancePage({ clientCode }: { clientCode: string }) 
   const h = data?.data ?? null
   if (error) return <Box sx={{ p: rem(24), color: colors.status.error }}>{error}</Box>
   return (
-    <PageShell header={<Header h={h} tab={tab} setTab={setTab} />}>
+    <PageShell embedded header={<Header h={h} tab={tab} setTab={setTab} />}>
       {/* Only the body scrolls; the header stays put. */}
       {/* Each tab owns its API call, so switching tabs shows that tab's skeleton until it responds. */}
           {tab === 'Summary' ? <SummaryTab clientCode={clientCode} /> : tab === 'XIRR' ? <XirrTab clientCode={clientCode} /> : tab === 'Allocation' ? <AllocationTab clientCode={clientCode} /> : tab === 'Holding' ? <HoldingTab clientCode={clientCode} /> : tab === 'Transaction' ? <TransactionTab clientCode={clientCode} strategy={h?.strategy ?? ''} /> : tab === 'Performance' ? <PerformanceTab clientCode={clientCode} strategy={h?.strategy ?? ''} variant={h ? (h.type.toUpperCase() === 'AIF' ? 'aif' : 'pms') : null} /> : <ComingSoon tab={tab} />}

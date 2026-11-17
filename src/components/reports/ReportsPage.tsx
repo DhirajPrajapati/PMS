@@ -312,7 +312,7 @@ export default function ReportsPage() {
     setAdvanced({})
     setPageNo(0)
     setCategoryId(categories[0]?.id ?? null)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    document.querySelector('[data-app-scroll]')?.scrollTo({ top: 0, behavior: 'smooth' })
   }
   /** Fade the lower sections out, then clear everything. */
   const resetFlow = () => {

@@ -1,5 +1,6 @@
 import { Box, ButtonBase } from '@mui/material'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
+import { HashRouter, Navigate, Route, Routes, useParams } from 'react-router-dom'
 import { fetchAifRedemption } from './api/aifRedemption'
 import { fetchAifTopup } from './api/aifTopup'
 import { fetchMyStrategies } from './api/myStrategies'
@@ -19,6 +20,7 @@ import ReportsPage from './components/reports/ReportsPage'
 import ProfilesSection from './components/ProfilesSection'
 import PendingRedemptionsDialog from './components/PendingRedemptionsDialog'
 import RdFileDialog from './components/RdFileDialog'
+import RootLayout from './components/layout/RootLayout'
 import { useApiResource } from './hooks/useApiResource'
 import { rem } from './utils/format'
 import { colors } from './theme'
@@ -179,24 +181,23 @@ function PortalPage() {
   )
 }
 
-const readPage = () => {
-  const h = window.location.hash
-  return h.startsWith('#/reports') ? 'reports' : h.startsWith('#/performance') ? 'performance' : h.startsWith('#/statement') ? 'statement' : 'portal'
-}
+const ClientPerformance = () => <PerformancePage clientCode={decodeURIComponent(useParams().clientCode ?? '')} />
+const FolioStatement = () => <AifStatementPage folio={decodeURIComponent(useParams().folio ?? '')} />
 
-/** Tiny hash router: "#/reports" opens Investment Reports, "#/performance/<code>" the Strategy Performance Summary, "#/statement/<folio>" the AIF statement, anything else is the component gallery. */
+/** Hash routes (#/…) under one RootLayout (sidebar + header + <Outlet/>): "/" component gallery, "/reports" Investment Reports,
+ *  "/performance/:clientCode" Strategy Performance Summary, "/statement/:folio" AIF statement. */
 export default function App() {
-  const [page, setPage] = useState(readPage)
-  useEffect(() => {
-    const on = () => {
-      setPage(readPage())
-      window.scrollTo({ top: 0 })
-    }
-    window.addEventListener('hashchange', on)
-    return () => window.removeEventListener('hashchange', on)
-  }, [])
-  if (page === 'reports') return <ReportsPage />
-  if (page === 'statement') return <AifStatementPage folio={decodeURIComponent(window.location.hash.split('/')[2] ?? '')} />
-  if (page === 'performance') return <PerformancePage clientCode={decodeURIComponent(window.location.hash.split('/')[2] ?? '')} />
-  return <PortalPage />
+  return (
+    <HashRouter>
+      <Routes>
+        <Route element={<RootLayout />}>
+          <Route index element={<PortalPage />} />
+          <Route path="reports" element={<ReportsPage />} />
+          <Route path="performance/:clientCode" element={<ClientPerformance />} />
+          <Route path="statement/:folio" element={<FolioStatement />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Route>
+      </Routes>
+    </HashRouter>
+  )
 }

@@ -88,3 +88,21 @@ export const perfPalette = {
   derivatives: ['#7b5ea7', '#b6a2d3', '#efe8f5', '#7b5ea7'],
   other: ['#8a97ad', '#c3cad7', '#eef0f4', '#8a97ad'],
 } as const
+
+/** App shell (sidebar + header), measured from the reference screen (CSS px = image px * 0.691). */
+export const shellPalette = {
+  /** Selected sidebar item */
+  activeBg: `linear-gradient(135deg,${colors.red[300]},${colors.brand.wineDeep})`,
+  activeShadow: '0 6px 14px rgba(122,31,32,.28)',
+  activeText: colors.base.white,
+  itemText: colors.text.strong,
+  subText: colors.text.secondary,
+  hoverBg: colors.surface.tint,
+  hoverBgStrong: colors.cream[963],
+  rule: colors.border.default,
+  logout: colors.brand.primary,
+  pillIdleBg: colors.cream[914],
+  pillIdleText: colors.text.mutedWarm,
+  pillActiveBg: colors.brand.primary,
+  pillActiveText: colors.base.white,
+} as const

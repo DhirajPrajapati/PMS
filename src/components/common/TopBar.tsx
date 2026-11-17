@@ -6,10 +6,10 @@ import { reset } from '../../utils/responsive'
 import Avatar from './Avatar'
 
 /** Phone-only app bar: menu button, brand mark, user avatar. */
-export default function TopBar({ name }: { name: string }) {
+export default function TopBar({ name, onMenu }: { name: string; onMenu?: () => void }) {
   return (
     <Box sx={{ display: { xs: 'flex', sm: 'none' }, alignItems: 'center', justifyContent: 'space-between', height: rem(67), px: rem(18), bgcolor: colors.base.white, borderBottom: `${rem(1)} solid ${colors.border.default}` }}>
-      <ButtonBase aria-label="Menu" sx={{ width: rem(37), height: rem(37), borderRadius: rem(10), border: `${rem(1)} solid ${colors.border.default}`, color: colors.text.ink }}>
+      <ButtonBase aria-label="Menu" onClick={onMenu} sx={{ width: rem(37), height: rem(37), borderRadius: rem(10), border: `${rem(1)} solid ${colors.border.default}`, color: colors.text.ink }}>
         <Menu size={rem(20)} />
       </ButtonBase>
       <Box sx={{ textAlign: 'center', lineHeight: 1, ...reset }} aria-label="ICICI Prudential Alternate Investments">

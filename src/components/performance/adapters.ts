@@ -51,7 +51,7 @@ function kpis(d: { aum: number; invested: number; returns: number; xirr: number 
     { label: labels[0], value: inr(d.aum), sub: subs[0] },
     { label: labels[1], value: inr(d.invested), sub: subs[1] },
     { label: labels[2], value: d.returns < 0 ? inrSigned(d.returns) : inr(d.returns), sub: subs[2] ?? returnsSub(d.returns, d.invested) },
-    { label: labels[3], value: pct2(d.xirr), sub: subs[3] ?? 'Annualized Return' },
+    { label: labels[3], value: `${d.xirr.toFixed(1)}%`, sub: subs[3] ?? 'Annualized Return' },
   ]
 }
 
@@ -85,7 +85,7 @@ export function summaryView(d: PerformanceSummaryResponse['data']) {
       portfolioValue: inr(d.aum),
     },
     allocation: {
-      totalAum: formatAum(d.aum),
+      totalAum: d.aum >= 1e7 ? `₹${(d.aum / 1e7).toFixed(1)} Cr` : formatAum(d.aum),
       rows: d.allocationDetails.map((x, i): AllocationRow => ({ key: allocationKey(x.sector, i), label: x.sector, amount: inr(x.marketValue), pct: x.pct })),
     },
   }
