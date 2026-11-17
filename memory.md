@@ -2,7 +2,7 @@
 
 React 19 + TypeScript + Vite 8 + MUI v9 + lucide-react + Highcharts. Design screenshots are 2x (CSS px = image px / 2).
 All data comes from mock API modules in `src/api/` (simulated latency, `{status, message, data}` envelope).
-Dev server: `npm run dev` → http://localhost:5173/. Typecheck: `npx tsc -b` (run from project root).
+Routing: `react-router-dom` HashRouter (URLs stay `#/…`). Dev server: `npm run dev` → http://localhost:5173/. Typecheck: `npx tsc -b` (run from project root).
 
 ## Conventions
 - **Theme**: all colours/gradients/shadows/fonts live in `src/theme/` (`designTokens.ts` = the user's pasted design-system `tokens` verbatim + a `pms` key holding our measured values; `colors.ts` semantic groups + lightness-keyed scales like `colors.cream[971]`; `pms.ts` fonts/gradients/shadows/overlays; `index.ts` builds the MUI `theme` from tokens and exports `colors/gradients/shadows/overlays/fonts` = `tokens.pms.*`). `main.tsx` wraps App in ThemeProvider + CssBaseline (index.css was removed). Never hardcode hex/rgba in components — import from `../theme`.
@@ -18,7 +18,7 @@ Dev server: `npm run dev` → http://localhost:5173/. Typecheck: `npx tsc -b` (r
 - Don't click the RD dialog's Download (builds a CSV; needs user permission).
 
 ## Git / repo
-- Commits: `2c6c032` first build; `f4f561d` profiles, reports page, shared dialogs; `27d1e45` AIF My Strategies card + Pms/Aif split; `a929f7c` memory update; `40642b6` Performance Summary tabs + AIF View Statement + shared components; `f459f03` new mock API contracts (Performance tabs + My Strategies). Pushed to origin/main.
+- Commits: `2c6c032` first build; `f4f561d` profiles, reports page, shared dialogs; `27d1e45` AIF My Strategies card + Pms/Aif split; `a929f7c` memory update; `40642b6` Performance Summary tabs + AIF View Statement + shared components; `f459f03` new mock API contracts (Performance tabs + My Strategies); `92fb54f` app shell (sidebar + header) + react-router RootLayout/Outlet. Pushed to origin/main.
 - Untracked and deliberately left out of commits: `.agents/`, `.claude/`, `skills-lock.json`.
 - Remote: https://github.com/DhirajPrajapati/PMS.git (`origin`), branch `main` tracks `origin/main`.
 - First commit `2c6c032` ("Build PMS portal: strategy cards, My Strategies, AIF cards, themed mock APIs") holds the original 58 files. `.gitignore` excludes node_modules and dist.
@@ -26,7 +26,7 @@ Dev server: `npm run dev` → http://localhost:5173/. Typecheck: `npx tsc -b` (r
 
 ## Folder structure (`src/`)
 ```
-App.tsx                     page: numbered sections + "API responses" toggle
+App.tsx                     HashRouter routes under RootLayout (see "App shell"); PortalPage = numbered sections + "API responses" toggle
 api/                        (performanceSummary.ts + myStrategies.ts follow the user's pasted v2 contracts, see "Mock API contracts v2")
                             pagination.ts (paginate, Paged, PageParams, query, wait)
                             strategies.ts (3 PMS endpoints), myStrategies.ts, aifTopup.ts,
@@ -51,6 +51,9 @@ components/
                             Performance-era shared UI: Tabs, DonutChart/XirrChart/ReturnsBarChart/TrajectoryChart (Highcharts), StatCard, Panel,
                             IconChip, Avatar, SegmentedToggle, Pill (tag|badge), Pagination, DownloadButton, SortHeader, ExpandableItem (+FieldGrid,
                             RotatingChevron), BusyRegion, LabelValueList, ChipGroup, EmptyState, PageShell (fixed header + scrolling body), TopBar, Breadcrumb
+  layout/                   App shell: RootLayout (route element: AppLayout + <Outlet/>, picks active sidebar item from path),
+                            AppLayout (sidebar | header + rounded white-cream scroll panel `data-app-scroll`; phones: TopBar + Drawer),
+                            Sidebar (collapsible, PMS/AIF groups), AppHeader (pills + user), BrandLogo (text approximation), navItems.ts
   MyStrategiesSection.tsx   header, grid/list toggle, HScroller, MyStrategiesSkeleton; StrategyTable.tsx (list view)
   PendingRedemptionsDialog.tsx , RdFileDialog.tsx (now built on common/DialogShell)
   ProfilesSection.tsx       My Profile cards (single select, click again deselects); cards/ProfileCard/
@@ -95,6 +98,12 @@ Every section shows skeletons until its API responds. Skeletons are laid out fro
 - All animations should be smooth (user rule): prefer Collapse/keyframe fades with respect for `prefers-reduced-motion`.
 - Not built: mobile app header (hamburger/logo/avatar) from the reports screenshots; the user's screen-recording of the reset animation couldn't be read (macOS temp file gone), so the reset fade is my own design.
 - `RadioOption.tsx` had a pre-existing bug (single-quoted `'${...}'` border) — fixed.
+
+## App shell (sidebar + header)
+- Routes (App.tsx, all inside `RootLayout`): `/` gallery, `/reports`, `/performance/:clientCode`, `/statement/:folio`, `*` -> `/`. Pages no longer own the viewport: use `<PageShell embedded header=…>` (fixed header + scrolling body inside the panel) or just let the panel scroll. Don't add TopBar to pages (AppLayout renders it on phones). Programmatic nav = `useNavigate`; plain `href="#/…"` still works.
+- Scale: the shell screenshot (sidebar visible) is **0.812 CSS px per image px** (measured from content text widths); the content-only screenshots are 0.688. Sidebar 265 wide, header 73 tall, items 41 tall, fonts 14.3 (items) / 13.3 (sub-items, user name) / 12.3 (pills). Colours/gradient/shadow in `shellPalette` (theme/pms.ts).
+- Method that worked: measure rendered text widths via TreeWalker+Range in the browser and compare to the reference image widths to derive the scale, instead of eyeballing.
+- Open: header avatar shows initials of "Vikram Nair" (VN) but the design shows "AD"; logo is text, not the real artwork; sidebar sub-links and My Profile/Transaction History/Design System all point to `#/`; collapsed rail and mobile drawer not compared to a design. Summary KPI XIRR is 1 decimal and donut centre "₹1.0 Cr" to match the design (kpis() is shared by other tabs).
 
 ## Strategy Performance Summary page
 - Route `#/performance/<clientCode>`, opened by the My Strategies `Performance` button. `components/performance/`: PerformancePage (header, tabs, Summary/XIRR/Allocation tabs), PerformanceTab, HoldingTab, TransactionTab, shared.tsx (KpiRow, TabFrame, DonutSkeleton; re-exports r/reset/MOBILE_Q). Mock API `api/performanceSummary.ts`, colours in `perfPalette` (theme/pms.ts). Desktop css = screenshot px * 0.691; mobile css = image px / 1.57.
